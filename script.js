@@ -1,13 +1,13 @@
 // ============================================================
-// DARK FORT - PORT
-// ANONYMOUS SOCIAL NETWORK
+// DARK FORT - СОЦИАЛЬНАЯ СЕТЬ
+// ВСЕ ПОСТЫ ОБЩИЕ, АНОНИМНО (ТОЛЬКО НИК И АВАТАР)
 // ============================================================
 
 const DEFAULT_AVATAR = 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg';
 const MAX_FILE_SIZE = 67 * 1024 * 1024;
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
-// --- ID ---
+// --- ID ПОЛЬЗОВАТЕЛЯ ---
 let profileId = localStorage.getItem('df_profile_id');
 if (!profileId) {
     profileId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -22,24 +22,24 @@ let notifOpen = false;
 const openComments = new Set();
 
 // --- DOM ---
-const nickInput = document.getElementById('nickInput');
-const profileAvatar = document.getElementById('profileAvatar');
-const profileBigAvatar = document.getElementById('profileBigAvatar');
-const profileNick = document.getElementById('profileNick');
-const avatarUpload = document.getElementById('avatarUpload');
-const notifBtn = document.getElementById('notifBtn');
-const notifBadge = document.getElementById('notifBadge');
-const notifPanel = document.getElementById('notifPanel');
-const nickError = document.getElementById('nickError');
-const postText = document.getElementById('postText');
-const mediaUpload = document.getElementById('mediaUpload');
-const mediaPreview = document.getElementById('mediaPreview');
-const publishBtn = document.getElementById('publishBtn');
-const uploadInfo = document.getElementById('uploadInfo');
-const postsFeed = document.getElementById('postsFeed');
-const postsProfile = document.getElementById('postsProfile');
+const nicknameInput = document.getElementById('nicknameInput');
+const profileAvatarEl = document.getElementById('profileAvatar');
+const profileBigAvatarEl = document.getElementById('profileBigAvatar');
+const profileNicknameEl = document.getElementById('profileNickname');
+const avatarUploadEl = document.getElementById('avatarUpload');
+const bellBtnEl = document.getElementById('bellBtn');
+const notifCountEl = document.getElementById('notifCount');
+const notificationPanelEl = document.getElementById('notificationPanel');
+const nickErrorMsg = document.getElementById('nickErrorMsg');
+const postTextEl = document.getElementById('postText');
+const mediaUploadEl = document.getElementById('mediaUpload');
+const mediaPreviewEl = document.getElementById('mediaPreview');
+const publishBtnEl = document.getElementById('publishBtn');
+const uploadStatusEl = document.getElementById('uploadStatus');
+const postsListFeedEl = document.getElementById('postsListFeed');
+const postsListProfileEl = document.getElementById('postsListProfile');
 
-// --- DATA ---
+// --- РАБОТА С ДАННЫМИ ---
 
 function getData() {
     try {
@@ -58,6 +58,7 @@ function getData() {
 function saveData(data) {
     try {
         localStorage.setItem('df_data', JSON.stringify(data));
+        // Синхронизация между вкладками
         try {
             const ch = new BroadcastChannel('df_channel');
             ch.postMessage({ type: 'update' });
@@ -66,11 +67,12 @@ function saveData(data) {
     } catch (e) {}
 }
 
-// --- LOAD ---
+// --- ЗАГРУЗКА ДАННЫХ ---
 
 function loadData() {
     const data = getData();
     
+    // Профиль
     if (data.profiles[profileId]) {
         currentProfile = data.profiles[profileId];
     } else {
@@ -83,11 +85,12 @@ function loadData() {
         currentProfile = data.profiles[profileId];
     }
     
+    // Посты с данными авторов
     allPosts = data.posts.map(p => {
         const author = data.profiles[p.authorId];
         return {
             ...p,
-            authorName: author?.nickname || 'ANON',
+            authorName: author?.nickname || 'АНОНИМ',
             authorAvatar: author?.avatarData || DEFAULT_AVATAR,
         };
     });
@@ -95,53 +98,54 @@ function loadData() {
     updateUI();
 }
 
-// --- UI ---
+// --- ОБНОВЛЕНИЕ UI ---
 
 function updateUI() {
     updateProfileUI();
-    renderPosts();
-    updateNotifBadge();
+    renderAllPosts();
+    updateNotifCount();
 }
 
 function updateProfileUI() {
     if (!currentProfile) return;
     
-    const nick = document.activeElement === nickInput
-        ? nickInput.value.trim()
+    const nick = document.activeElement === nicknameInput
+        ? nicknameInput.value.trim()
         : (currentProfile.nickname || '');
     
-    if (document.activeElement !== nickInput) {
-        nickInput.value = nick;
+    if (document.activeElement !== nicknameInput) {
+        nicknameInput.value = nick;
     }
-    
-    profileNick.textContent = nick || 'NICKNAME';
+    profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
     
     const avatar = currentProfile.avatarData || DEFAULT_AVATAR;
-    profileAvatar.src = avatar;
-    profileBigAvatar.src = avatar;
+    profileAvatarEl.src = avatar;
+    profileBigAvatarEl.src = avatar;
 }
 
-function renderPosts() {
+function renderAllPosts() {
     const sorted = [...allPosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
+    // Лента
     if (sorted.length) {
-        postsFeed.innerHTML = sorted.map(p => renderPost(p)).join('');
+        postsListFeedEl.innerHTML = sorted.map(p => renderPostCard(p)).join('');
     } else {
-        postsFeed.innerHTML = '<div class="empty">NO POSTS</div>';
+        postsListFeedEl.innerHTML = '<div class="empty-posts">ПОКА НЕТ ПОСТОВ</div>';
     }
     
+    // Мои посты
     const myPosts = sorted.filter(p => p.authorId === profileId);
     if (myPosts.length) {
-        postsProfile.innerHTML = myPosts.map(p => renderPost(p)).join('');
+        postsListProfileEl.innerHTML = myPosts.map(p => renderPostCard(p)).join('');
     } else {
-        postsProfile.innerHTML = '<div class="empty">NO POSTS</div>';
+        postsListProfileEl.innerHTML = '<div class="empty-posts">У ВАС НЕТ ПОСТОВ</div>';
     }
 }
 
-function renderPost(post) {
+function renderPostCard(post) {
     const isMine = post.authorId === profileId;
     const deleteBtn = isMine ? `
-        <button class="post-delete" data-delete="${post.id}">X</button>
+        <button class="delete-post-btn" data-delete="${post.id}" type="button">✕</button>
     ` : '';
     
     let mediaHTML = '';
@@ -163,7 +167,7 @@ function renderPost(post) {
             <div class="comment">
                 <img class="comment-avatar" src="${author?.avatarData || DEFAULT_AVATAR}">
                 <div class="comment-content">
-                    <div class="comment-author">${escapeHtml(author?.nickname || 'ANON')}</div>
+                    <span class="comment-nick">${escapeHtml(author?.nickname || 'АНОНИМ')}</span>
                     <div class="comment-text">${escapeHtml(c.text)}</div>
                 </div>
             </div>
@@ -174,54 +178,57 @@ function renderPost(post) {
     const myVote = post.votes?.[profileId] || 0;
     
     return `
-        <div class="post" data-id="${post.id}">
+        <div class="post-card" data-id="${post.id}">
             <div class="post-header">
                 <img class="post-avatar" src="${post.authorAvatar || DEFAULT_AVATAR}">
-                <span class="post-author">${escapeHtml(post.authorName || 'ANON')}</span>
-                <span class="post-time">${formatTime(post.createdAt)}</span>
+                <span class="post-nick">${escapeHtml(post.authorName || 'АНОНИМ')}</span>
+                <span class="post-time">${formatDate(post.createdAt)}</span>
                 ${deleteBtn}
             </div>
             ${post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : ''}
             ${mediaHTML}
             <div class="post-footer">
-                <button class="post-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">+ ${post.likes || 0}</button>
-                <button class="post-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">- ${post.dislikes || 0}</button>
-                <button class="post-btn" data-toggle="${post.id}">C ${comments.length}</button>
+                <button class="vote-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 1.96-2.45l-1.38-7A2 2 0 0 0 17.05 11H14z"/><rect x="4" y="11" width="3" height="11" rx="1"/></svg>${post.likes || 0}
+                </button>
+                <button class="vote-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="transform:rotate(180deg)"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 1.96-2.45l-1.38-7A2 2 0 0 0 17.05 11H14z"/><rect x="4" y="11" width="3" height="11" rx="1"/></svg>${post.dislikes || 0}
+                </button>
+                <button class="comment-btn" data-toggle="${post.id}" type="button">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${comments.length}
+                </button>
             </div>
-            <div class="comments-section ${isOpen ? 'open' : ''}" id="comments-${post.id}">
+            <div class="comments-section" id="comments-${post.id}" style="display:${isOpen ? 'block' : 'none'}">
                 ${commentsHTML}
                 <div class="comment-input-row">
-                    <input class="comment-input" id="comment-input-${post.id}" maxlength="1000" placeholder="TYPE COMMENT...">
-                    <button class="comment-send" data-comment="${post.id}">SEND</button>
+                    <input class="comment-input" id="comment-input-${post.id}" maxlength="1000" placeholder="КОММЕНТАРИЙ...">
+                    <button class="btn add-comment-btn" data-comment="${post.id}" type="button">▶</button>
                 </div>
             </div>
         </div>
     `;
 }
 
-function updateNotifBadge() {
+function updateNotifCount() {
     const data = getData();
     const count = data.notifs?.filter(n => !n.read).length || 0;
-    notifBadge.textContent = count;
-    notifBadge.classList.toggle('visible', count > 0);
+    notifCountEl.textContent = count;
+    notifCountEl.classList.toggle('visible', count > 0);
 }
 
-function renderNotifs() {
+function renderNotifications() {
     const data = getData();
     const notifs = data.notifs || [];
     if (notifs.length) {
-        notifPanel.innerHTML = notifs.map(n => `
-            <div class="notif-item">
-                ${escapeHtml(n.message)}
-                <span class="notif-time">${formatTime(n.createdAt)}</span>
-            </div>
+        notificationPanelEl.innerHTML = notifs.map(n => `
+            <div class="notif-item">${escapeHtml(n.message)}<span class="notif-time">${formatDate(n.createdAt)}</span></div>
         `).join('');
     } else {
-        notifPanel.innerHTML = '<div class="notif-item">NO NOTIFICATIONS</div>';
+        notificationPanelEl.innerHTML = '<div class="notif-item">НЕТ УВЕДОМЛЕНИЙ</div>';
     }
 }
 
-// --- HELPERS ---
+// --- ВСПОМОГАТЕЛЬНЫЕ ---
 
 function escapeHtml(v) {
     const d = document.createElement('div');
@@ -229,19 +236,17 @@ function escapeHtml(v) {
     return d.innerHTML;
 }
 
-function formatTime(v) {
+function formatDate(v) {
     if (!v) return '';
     try {
-        return new Intl.DateTimeFormat('ru', {
+        return new Intl.DateTimeFormat('ru-RU', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
         }).format(new Date(v));
-    } catch {
-        return '';
-    }
+    } catch { return ''; }
 }
 
-function toast(msg, err = false) {
+function showToast(msg, err = false) {
     const old = document.querySelector('.toast');
     if (old) old.remove();
     const t = document.createElement('div');
@@ -255,7 +260,7 @@ function genId() {
     return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
 }
 
-// --- PROFILE ---
+// --- ПРОФИЛЬ ---
 
 function saveProfile(nick, avatar) {
     const data = getData();
@@ -265,8 +270,8 @@ function saveProfile(nick, avatar) {
     );
     
     if (taken && nick) {
-        nickInput.classList.add('error');
-        nickError.classList.add('visible');
+        nicknameInput.classList.add('error');
+        nickErrorMsg.classList.add('visible');
         return false;
     }
     
@@ -281,20 +286,20 @@ function saveProfile(nick, avatar) {
     saveData(data);
     currentProfile = data.profiles[profileId];
     
-    nickInput.classList.remove('error');
-    nickError.classList.remove('visible');
+    nicknameInput.classList.remove('error');
+    nickErrorMsg.classList.remove('visible');
     
     updateUI();
     return true;
 }
 
-// --- POSTS ---
+// --- ПОСТЫ ---
 
 function createPost(text, media) {
     const data = getData();
     
     if (!currentProfile?.nickname) {
-        toast('SET NICKNAME FIRST', true);
+        showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
         return false;
     }
     
@@ -313,7 +318,7 @@ function createPost(text, media) {
     data.posts.unshift(post);
     saveData(data);
     loadData();
-    toast('POST PUBLISHED');
+    showToast('ПОСТ ОПУБЛИКОВАН');
     return true;
 }
 
@@ -322,13 +327,13 @@ function deletePost(id) {
     const idx = data.posts.findIndex(p => p.id === id);
     if (idx === -1) return false;
     if (data.posts[idx].authorId !== profileId) {
-        toast('NOT YOUR POST', true);
+        showToast('НЕ ВАШ ПОСТ', true);
         return false;
     }
     data.posts.splice(idx, 1);
     saveData(data);
     loadData();
-    toast('POST DELETED');
+    showToast('ПОСТ УДАЛЁН');
     return true;
 }
 
@@ -364,7 +369,7 @@ function addComment(postId, text) {
     if (!post) return false;
     
     if (!currentProfile?.nickname) {
-        toast('SET NICKNAME FIRST', true);
+        showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
         return false;
     }
     
@@ -381,60 +386,60 @@ function addComment(postId, text) {
     return true;
 }
 
-// --- EVENTS ---
+// --- СОБЫТИЯ ---
 
-// Nickname
-nickInput.addEventListener('input', function() {
+// Никнейм
+nicknameInput.addEventListener('input', function() {
     const nick = this.value.trim();
-    profileNick.textContent = nick || 'NICKNAME';
+    profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
     clearTimeout(saveTimer);
     if (!nick) {
         this.classList.remove('error');
-        nickError.classList.remove('visible');
+        nickErrorMsg.classList.remove('visible');
         return;
     }
     saveTimer = setTimeout(() => saveProfile(nick), 400);
 });
 
-nickInput.addEventListener('blur', function() {
+nicknameInput.addEventListener('blur', function() {
     clearTimeout(saveTimer);
     const nick = this.value.trim();
     if (nick) saveProfile(nick);
 });
 
-// Avatar
-profileAvatar.addEventListener('click', () => avatarUpload.click());
+// Аватар
+profileAvatarEl.addEventListener('click', () => avatarUploadEl.click());
 
-avatarUpload.addEventListener('change', function() {
+avatarUploadEl.addEventListener('change', function() {
     const file = this.files[0];
     this.value = '';
     if (!file) return;
     
     if (!currentProfile?.nickname) {
-        toast('SET NICKNAME FIRST', true);
+        showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
         return;
     }
     if (file.size > MAX_AVATAR_SIZE) {
-        toast('AVATAR MAX 5MB', true);
+        showToast('АВАТАР МАКСИМУМ 5 МБ', true);
         return;
     }
     if (!file.type.startsWith('image/')) {
-        toast('IMAGE ONLY', true);
+        showToast('ТОЛЬКО ИЗОБРАЖЕНИЯ', true);
         return;
     }
     
     const reader = new FileReader();
     reader.onload = function(e) {
         saveProfile(currentProfile.nickname, e.target.result);
-        toast('AVATAR UPDATED');
+        showToast('АВАТАР ОБНОВЛЁН');
     };
     reader.readAsDataURL(file);
 });
 
-// Media attach
-document.getElementById('attachBtn').addEventListener('click', () => mediaUpload.click());
+// Медиа
+document.getElementById('attachBtn').addEventListener('click', () => mediaUploadEl.click());
 
-mediaUpload.addEventListener('change', function() {
+mediaUploadEl.addEventListener('change', function() {
     const files = Array.from(this.files);
     this.value = '';
     
@@ -442,66 +447,67 @@ mediaUpload.addEventListener('change', function() {
     
     for (const file of files) {
         if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-            toast('UNSUPPORTED FILE', true);
+            showToast('НЕПОДДЕРЖИВАЕМЫЙ ФАЙЛ', true);
             continue;
         }
         if (file.size > MAX_FILE_SIZE || total + file.size > MAX_FILE_SIZE) {
-            toast('MAX 67MB TOTAL', true);
+            showToast('МАКСИМУМ 67 МБ', true);
             break;
         }
         total += file.size;
         pendingMedia.push({ file, url: URL.createObjectURL(file) });
     }
     renderMediaPreview();
-    updateUploadInfo();
+    updateUploadStatus();
 });
 
 function renderMediaPreview() {
     if (pendingMedia.length) {
-        mediaPreview.innerHTML = pendingMedia.map((item, i) => `
+        mediaPreviewEl.innerHTML = pendingMedia.map((item, i) => `
             <div class="preview-item">
                 ${item.file.type.startsWith('video/')
                     ? `<video src="${item.url}" muted></video>`
                     : `<img src="${item.url}">`}
-                <button class="preview-remove" data-remove="${i}">X</button>
+                <div class="preview-size">${escapeHtml(item.file.name)}</div>
+                <button class="remove-media" data-remove="${i}" type="button">✕</button>
             </div>
         `).join('');
     } else {
-        mediaPreview.innerHTML = '';
+        mediaPreviewEl.innerHTML = '';
     }
 }
 
-function updateUploadInfo(text) {
+function updateUploadStatus(text) {
     if (text) {
-        uploadInfo.textContent = text;
+        uploadStatusEl.textContent = text;
         return;
     }
     const total = pendingMedia.reduce((s, i) => s + i.file.size, 0);
-    uploadInfo.textContent = pendingMedia.length
-        ? `${pendingMedia.length} FILES (${(total / 1048576).toFixed(1)} MB)`
+    uploadStatusEl.textContent = pendingMedia.length
+        ? `${pendingMedia.length} ФАЙЛОВ (${(total / 1048576).toFixed(1)} МБ)`
         : '';
 }
 
-mediaPreview.addEventListener('click', function(e) {
+mediaPreviewEl.addEventListener('click', function(e) {
     const btn = e.target.closest('[data-remove]');
     if (!btn) return;
     const idx = Number(btn.dataset.remove);
     const removed = pendingMedia.splice(idx, 1)[0];
     if (removed) URL.revokeObjectURL(removed.url);
     renderMediaPreview();
-    updateUploadInfo();
+    updateUploadStatus();
 });
 
-// Publish
-publishBtn.addEventListener('click', async function() {
+// Публикация
+publishBtnEl.addEventListener('click', async function() {
     if (!currentProfile?.nickname) {
-        toast('SET NICKNAME FIRST', true);
+        showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
         return;
     }
     
-    const text = postText.value.trim();
+    const text = postTextEl.value.trim();
     if (!text && pendingMedia.length === 0) {
-        toast('TYPE SOMETHING', true);
+        showToast('НАПИШИТЕ ТЕКСТ ИЛИ ПРИКРЕПИТЕ ФАЙЛ', true);
         return;
     }
     
@@ -524,55 +530,55 @@ publishBtn.addEventListener('click', async function() {
         
         createPost(text, media);
         
-        postText.value = '';
+        postTextEl.value = '';
         pendingMedia.forEach((item) => URL.revokeObjectURL(item.url));
         pendingMedia = [];
         renderMediaPreview();
-        updateUploadInfo();
+        updateUploadStatus();
         
-        switchTab('feed');
+        setActiveTab('tabFeed', 'feedSection');
         
     } catch (e) {
-        toast(e.message, true);
+        showToast(e.message, true);
     } finally {
         this.disabled = false;
-        this.textContent = 'PUBLISH';
+        this.textContent = 'ОПУБЛИКОВАТЬ';
     }
 });
 
-// --- CLICK HANDLERS ---
+// --- КЛИКИ ---
 
 document.addEventListener('click', function(e) {
-    // Vote
+    // Голоса
     const voteBtn = e.target.closest('[data-vote]');
     if (voteBtn) {
         if (!currentProfile?.nickname) {
-            toast('SET NICKNAME FIRST', true);
+            showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
             return;
         }
         votePost(voteBtn.dataset.id, Number(voteBtn.dataset.vote));
         return;
     }
     
-    // Toggle comments
+    // Комментарии
     const toggleBtn = e.target.closest('[data-toggle]');
     if (toggleBtn) {
         const id = toggleBtn.dataset.toggle;
         const section = document.getElementById(`comments-${id}`);
         if (!section) return;
-        const open = section.classList.toggle('open');
+        const open = section.style.display !== 'block';
+        section.style.display = open ? 'block' : 'none';
         open ? openComments.add(id) : openComments.delete(id);
         return;
     }
     
-    // Send comment
-    const sendBtn = e.target.closest('[data-comment]');
-    if (sendBtn) {
+    const commentBtn = e.target.closest('[data-comment]');
+    if (commentBtn) {
         if (!currentProfile?.nickname) {
-            toast('SET NICKNAME FIRST', true);
+            showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
             return;
         }
-        const id = sendBtn.dataset.comment;
+        const id = commentBtn.dataset.comment;
         const input = document.getElementById(`comment-input-${id}`);
         const text = input?.value.trim();
         if (!text) return;
@@ -582,16 +588,16 @@ document.addEventListener('click', function(e) {
         return;
     }
     
-    // Delete post
+    // Удаление
     const delBtn = e.target.closest('[data-delete]');
     if (delBtn) {
-        if (!confirm('DELETE POST?')) return;
+        if (!confirm('УДАЛИТЬ ПОСТ?')) return;
         deletePost(delBtn.dataset.delete);
         return;
     }
 });
 
-// Enter comment
+// Enter для комментариев
 document.addEventListener('keydown', function(e) {
     if (e.key !== 'Enter' || e.shiftKey || !e.target.classList.contains('comment-input')) return;
     e.preventDefault();
@@ -599,45 +605,43 @@ document.addEventListener('keydown', function(e) {
     if (btn) btn.click();
 });
 
-// Notifications
-notifBtn.addEventListener('click', function() {
+// Уведомления
+bellBtnEl.addEventListener('click', function() {
     notifOpen = !notifOpen;
-    notifPanel.classList.toggle('open', notifOpen);
+    notificationPanelEl.style.display = notifOpen ? 'block' : 'none';
     if (notifOpen) {
-        renderNotifs();
+        renderNotifications();
         const data = getData();
         if (data.notifs) {
             data.notifs.forEach(n => { n.read = true; });
             saveData(data);
-            updateNotifBadge();
+            updateNotifCount();
         }
     }
 });
 
 document.addEventListener('click', function(e) {
     if (!notifOpen) return;
-    if (notifBtn.contains(e.target) || notifPanel.contains(e.target)) return;
+    if (bellBtnEl.contains(e.target) || notificationPanelEl.contains(e.target)) return;
     notifOpen = false;
-    notifPanel.classList.remove('open');
+    notificationPanelEl.style.display = 'none';
 });
 
-// Tabs
-function switchTab(name) {
-    document.querySelectorAll('.tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.tab === name);
+// Вкладки
+function setActiveTab(buttonId, sectionId) {
+    document.querySelectorAll('.tabs button').forEach(btn => {
+        btn.classList.toggle('active', btn.id === buttonId);
     });
-    document.querySelectorAll('.tab-content').forEach(c => {
-        c.classList.toggle('active', c.id === name);
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.toggle('active', section.id === sectionId);
     });
 }
 
-document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', function() {
-        switchTab(this.dataset.tab);
-    });
-});
+document.getElementById('tabFeed').addEventListener('click', () => setActiveTab('tabFeed', 'feedSection'));
+document.getElementById('tabCreate').addEventListener('click', () => setActiveTab('tabCreate', 'createSection'));
+document.getElementById('tabProfile').addEventListener('click', () => setActiveTab('tabProfile', 'profileSection'));
 
-// --- SYNC ---
+// --- СИНХРОНИЗАЦИЯ МЕЖДУ ВКЛАДКАМИ ---
 
 function initSync() {
     try {
@@ -648,7 +652,7 @@ function initSync() {
     } catch (e) {}
 }
 
-// --- DEMO ---
+// --- ДЕМО-ПОСТЫ ---
 
 function addDemoPosts() {
     const data = getData();
@@ -656,7 +660,7 @@ function addDemoPosts() {
     
     if (!data.profiles['demo']) {
         data.profiles['demo'] = {
-            nickname: 'SYSTEM',
+            nickname: 'DARK FORT',
             avatarData: DEFAULT_AVATAR,
             created: new Date().toISOString()
         };
@@ -666,7 +670,7 @@ function addDemoPosts() {
         {
             id: genId(),
             authorId: 'demo',
-            text: 'DARK FORT PORT.\n амамам.\n ТВОЙ НИК И АВАТАР.',
+            text: 'DARK FORT PORT АКТИВИРОВАН.\nАНОНИМНАЯ СЕТЬ ГОТОВА К РАБОТЕ.\nУСТАНОВИТЕ СВОЙ НИК И АВАТАР.',
             media: [],
             likes: 2,
             dislikes: 0,
@@ -675,7 +679,7 @@ function addDemoPosts() {
                 {
                     id: genId(),
                     authorId: profileId,
-                    text: 'CONNECTED',
+                    text: 'ПОДКЛЮЧЁН',
                     createdAt: new Date(Date.now() - 60000).toISOString()
                 }
             ],
@@ -686,7 +690,7 @@ function addDemoPosts() {
     saveData(data);
 }
 
-// --- INIT ---
+// --- ЗАПУСК ---
 
 function init() {
     addDemoPosts();
@@ -694,7 +698,7 @@ function init() {
     loadData();
     
     if (!currentProfile?.nickname) {
-        nickInput.focus();
+        nicknameInput.focus();
     }
     
     setInterval(loadData, 10000);

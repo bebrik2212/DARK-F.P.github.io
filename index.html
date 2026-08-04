@@ -3,75 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=0.8">
-    <meta name="theme-color" content="#0a0a0c">
+    <meta name="theme-color" content="#0b0b0e">
     <title>DARK FORT</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <div class="header-left">
-                <div class="logo">DARK FORT</div>
-                <div class="logo-sub">PORT</div>
-            </div>
-            <div class="header-right">
-                <button class="notif-btn" id="notifBtn">
-                    <span class="notif-icon">🔔</span>
-                    <span class="notif-badge" id="notifBadge">0</span>
-                </button>
-            </div>
-        </header>
-
-        <div class="profile-bar">
-            <img class="avatar" id="profileAvatar" src="https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg" alt="avatar">
-            <input type="file" id="avatarUpload" accept="image/*" hidden>
+    <div class="box">
+        <div class="profile-row">
+            <img class="avatar" id="profileAvatar" src="https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg" alt="Аватар">
+            <input type="file" id="avatarUpload" class="avatar-input" accept="image/*">
             <div class="nick-wrap">
-                <input type="text" class="nick-input" id="nickInput" placeholder="NICKNAME" maxlength="20">
-                <div class="nick-error" id="nickError">NICKNAME TAKEN</div>
+                <input type="text" class="nick-input" id="nicknameInput" placeholder="Введите ник" maxlength="20">
+                <div class="nick-error-msg" id="nickErrorMsg">НИК ЗАНЯТ</div>
+            </div>
+            <button class="bell" id="bellBtn" type="button">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <span class="bell-count" id="notifCount">0</span>
+            </button>
+        </div>
+
+        <div class="tabs" role="tablist">
+            <button id="tabFeed" class="active" type="button">ПОСТЫ</button>
+            <button id="tabCreate" type="button">СДЕЛАТЬ ПОСТ</button>
+            <button id="tabProfile" type="button">ТВОЙ ПРОФИЛЬ</button>
+        </div>
+
+        <div class="notif-panel" id="notificationPanel"></div>
+
+        <div id="feedSection" class="section active">
+            <div class="posts-list" id="postsListFeed">
+                <div class="empty-posts">ЗАГРУЗКА...</div>
             </div>
         </div>
 
-        <nav class="tabs">
-            <button class="tab active" data-tab="feed">POSTS</button>
-            <button class="tab" data-tab="create">NEW POST</button>
-            <button class="tab" data-tab="profile">PROFILE</button>
-        </nav>
+        <div id="createSection" class="section">
+            <div class="create-post">
+                <textarea class="post-input" id="postText" maxlength="5000" placeholder="ЧТО НОВОГО?"></textarea>
+                <div class="media-preview" id="mediaPreview"></div>
+                <button class="attach-btn" id="attachBtn" type="button">
+                    <img src="https://media.tenor.com/jtS4RMiJDXUAAAAj/clippy-windows-xp.gif" alt="прикрепить">
+                </button>
+                <input type="file" id="mediaUpload" accept="image/*,video/*" multiple hidden>
+                <div id="uploadStatus" class="upload-status"></div>
+                <button class="btn" id="publishBtn" type="button">ОПУБЛИКОВАТЬ</button>
+            </div>
+        </div>
 
-        <div class="notif-panel" id="notifPanel"></div>
-
-        <main class="content">
-            <section class="tab-content active" id="feed">
-                <div class="posts" id="postsFeed">
-                    <div class="empty">LOADING...</div>
-                </div>
-            </section>
-
-            <section class="tab-content" id="create">
-                <div class="create-box">
-                    <textarea class="post-textarea" id="postText" placeholder="TYPE YOUR MESSAGE..." maxlength="5000"></textarea>
-                    <div class="media-preview" id="mediaPreview"></div>
-                    <div class="create-actions">
-                        <button class="attach-btn" id="attachBtn">ATTACH</button>
-                        <input type="file" id="mediaUpload" accept="image/*,video/*" multiple hidden>
-                        <span class="upload-info" id="uploadInfo"></span>
-                        <button class="publish-btn" id="publishBtn">PUBLISH</button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="tab-content" id="profile">
-                <div class="profile-info">
-                    <img class="profile-avatar-big" id="profileBigAvatar" src="https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg" alt="avatar">
-                    <h2 class="profile-nick" id="profileNick">NICKNAME</h2>
-                    <p class="profile-label">MY POSTS</p>
-                </div>
-                <div class="posts" id="postsProfile">
-                    <div class="empty">NO POSTS</div>
-                </div>
-            </section>
-        </main>
+        <div id="profileSection" class="section">
+            <div class="profile-info">
+                <img id="profileBigAvatar" src="https://litmir.club/data/Author/279000/279758/Фото_Нуремхет_Аноним_b86a9.jpg" alt="аватар">
+                <h3 id="profileNickname">ТВОЙ НИК</h3>
+                <p>МОИ ПОСТЫ</p>
+            </div>
+            <div class="posts-list" id="postsListProfile">
+                <div class="empty-posts">НЕТ ПОСТОВ</div>
+            </div>
+        </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>

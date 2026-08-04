@@ -533,4 +533,174 @@ publishBtn.addEventListener('click', async function() {
         switchTab('feed');
         
     } catch (e) {
-        toast(e.message, true
+        toast(e.message, true);
+    } finally {
+        this.disabled = false;
+        this.textContent = 'PUBLISH';
+    }
+});
+
+// --- CLICK HANDLERS ---
+
+document.addEventListener('click', function(e) {
+    // Vote
+    const voteBtn = e.target.closest('[data-vote]');
+    if (voteBtn) {
+        if (!currentProfile?.nickname) {
+            toast('SET NICKNAME FIRST', true);
+            return;
+        }
+        votePost(voteBtn.dataset.id, Number(voteBtn.dataset.vote));
+        return;
+    }
+    
+    // Toggle comments
+    const toggleBtn = e.target.closest('[data-toggle]');
+    if (toggleBtn) {
+        const id = toggleBtn.dataset.toggle;
+        const section = document.getElementById(`comments-${id}`);
+        if (!section) return;
+        const open = section.classList.toggle('open');
+        open ? openComments.add(id) : openComments.delete(id);
+        return;
+    }
+    
+    // Send comment
+    const sendBtn = e.target.closest('[data-comment]');
+    if (sendBtn) {
+        if (!currentProfile?.nickname) {
+            toast('SET NICKNAME FIRST', true);
+            return;
+        }
+        const id = sendBtn.dataset.comment;
+        const input = document.getElementById(`comment-input-${id}`);
+        const text = input?.value.trim();
+        if (!text) return;
+        addComment(id, text);
+        openComments.add(id);
+        input.value = '';
+        return;
+    }
+    
+    // Delete post
+    const delBtn = e.target.closest('[data-delete]');
+    if (delBtn) {
+        if (!confirm('DELETE POST?')) return;
+        deletePost(delBtn.dataset.delete);
+        return;
+    }
+});
+
+// Enter comment
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter' || e.shiftKey || !e.target.classList.contains('comment-input')) return;
+    e.preventDefault();
+    const btn = e.target.closest('.comment-input-row')?.querySelector('[data-comment]');
+    if (btn) btn.click();
+});
+
+// Notifications
+notifBtn.addEventListener('click', function() {
+    notifOpen = !notifOpen;
+    notifPanel.classList.toggle('open', notifOpen);
+    if (notifOpen) {
+        renderNotifs();
+        const data = getData();
+        if (data.notifs) {
+            data.notifs.forEach(n => { n.read = true; });
+            saveData(data);
+            updateNotifBadge();
+        }
+    }
+});
+
+document.addEventListener('click', function(e) {
+    if (!notifOpen) return;
+    if (notifBtn.contains(e.target) || notifPanel.contains(e.target)) return;
+    notifOpen = false;
+    notifPanel.classList.remove('open');
+});
+
+// Tabs
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === name);
+    });
+    document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.toggle('active', c.id === name);
+    });
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        switchTab(this.dataset.tab);
+    });
+});
+
+// --- SYNC ---
+
+function initSync() {
+    try {
+        const ch = new BroadcastChannel('df_channel');
+        ch.onmessage = function(e) {
+            if (e.data?.type === 'update') loadData();
+        };
+    } catch (e) {}
+}
+
+// --- DEMO ---
+
+function addDemoPosts() {
+    const data = getData();
+    if (data.posts.length > 0) return;
+    
+    if (!data.profiles['demo']) {
+        data.profiles['demo'] = {
+            nickname: 'SYSTEM',
+            avatarData: DEFAULT_AVATAR,
+            created: new Date().toISOString()
+        };
+    }
+    
+    data.posts = [
+        {
+            id: genId(),
+            authorId: 'demo',
+            text: 'DARK FORT PORT.\n амамам.\n ТВОЙ НИК И АВАТАР.',
+            media: [],
+            likes: 2,
+            dislikes: 0,
+            votes: {},
+            comments: [
+                {
+                    id: genId(),
+                    authorId: profileId,
+                    text: 'CONNECTED',
+                    createdAt: new Date(Date.now() - 60000).toISOString()
+                }
+            ],
+            createdAt: new Date(Date.now() - 120000).toISOString()
+        }
+    ];
+    
+    saveData(data);
+}
+
+// --- INIT ---
+
+function init() {
+    addDemoPosts();
+    initSync();
+    loadData();
+    
+    if (!currentProfile?.nickname) {
+        nickInput.focus();
+    }
+    
+    setInterval(loadData, 10000);
+    
+    console.log('DARK FORT PORT ONLINE');
+    console.log('ID:', profileId);
+}
+
+init();

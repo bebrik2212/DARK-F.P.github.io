@@ -1,27 +1,47 @@
 // ============================================================
-// DARK FORT - FIREBASE
+// DARK FORT - FIREBASE (ИСПРАВЛЕННЫЙ)
 // ============================================================
 
 // ============================================================
-// 🔥 ВАШ КОНФИГ FIREBASE
+// 🔥 КОНФИГ FIREBASE
 // ============================================================
 
 const firebaseConfig = {
     apiKey: "AIzaSyBa9NWi5FfpmAx0ExJh1fJ3b1ipUEEBRxU",
     authDomain: "dark-fortport.firebaseapp.com",
-    projectId: "dark-fortport",
-    storageBucket: "dark-fortport.firebasestorage.app",
+    projectId: "DARK FORTPORT",
+    storageBucket: "DARK FORTPORT.firebasestorage.app",
     messagingSenderId: "3814531503",
     appId: "1:3814531503:web:a8200e1f337935a3530f5a",
     measurementId: "G-KF9GGGL43L"
 };
 
 // ============================================================
-// ИНИЦИАЛИЗАЦИЯ FIREBASE
+// ИНИЦИАЛИЗАЦИЯ FIREBASE С ОБРАБОТКОЙ ОШИБОК
 // ============================================================
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+let db = null;
+let firebaseReady = false;
+
+try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    
+    // Включаем оффлайн-режим
+    db.enablePersistence()
+        .then(() => {
+            console.log('🔥 Offline persistence enabled');
+        })
+        .catch((err) => {
+            console.warn('Offline persistence error:', err);
+        });
+    
+    firebaseReady = true;
+    console.log('🔥 Firebase initialized');
+} catch (error) {
+    console.error('Ошибка инициализации Firebase:', error);
+    firebaseReady = false;
+}
 
 // ============================================================
 // КОНСТАНТЫ
@@ -31,7 +51,7 @@ const DEFAULT_AVATAR = 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115
 const MAX_FILE_SIZE = 67 * 1024 * 1024;
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
-// --- ID ПОЛЬЗОВАТЕЛЯ (анонимный) ---
+// --- ID ПОЛЬЗОВАТЕЛЯ ---
 let profileId = localStorage.getItem('df_profile_id');
 if (!profileId) {
     profileId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -46,6 +66,7 @@ let saveTimer = 0;
 let notifOpen = false;
 const openComments = new Set();
 let unsubscribePosts = null;
+let isInitialized = false;
 
 // --- DOM ЭЛЕМЕНТЫ ---
 const nicknameInput = document.getElementById('nicknameInput');
@@ -66,34 +87,108 @@ const postsListFeedEl = document.getElementById('postsListFeed');
 const postsListProfileEl = document.getElementById('postsListProfile');
 
 // ============================================================
+// КЭШИРОВАНИЕ (если Firebase не работает)
+// ============================================================
+
+function getCachedData() {
+    try {
+        const raw = localStorage.getItem('df_cache_data');
+        if (raw) {
+            const data = JSON.parse(raw);
+            // Проверяем, что данные не старые (меньше 1 часа)
+            if (data._timestamp && (Date.now() - data._timestamp) < 3600000) {
+                return data;
+            }
+        }
+    } catch (e) {}
+    return null;
+}
+
+function setCachedData(data) {
+    try {
+        data._timestamp = Date.now();
+        localStorage.setItem('df_cache_data', JSON.stringify(data));
+    } catch (e) {}
+}
+
+function getCachedProfile() {
+    try {
+        const raw = localStorage.getItem('df_cache_profile');
+        if (raw) {
+            return JSON.parse(raw);
+        }
+    } catch (e) {}
+    return null;
+}
+
+function setCachedProfile(profile) {
+    try {
+        localStorage.setItem('df_cache_profile', JSON.stringify(profile));
+    } catch (e) {}
+}
+
+// ============================================================
 // РАБОТА С ПРОФИЛЕМ
 // ============================================================
 
 async function getOrCreateProfile() {
+    // Если Firebase не готов, используем кэш
+    if (!firebaseReady || !db) {
+        const cached = getCachedProfile();
+        if (cached) {
+            currentProfile = cached;
+            updateUI();
+            showToast('ОФФЛАЙН РЕЖИМ (КЭШ)', true);
+            return currentProfile;
+        }
+        // Создаём локальный профиль
+        currentProfile = {
+            id: profileId,
+            nickname: '',
+            avatarData: DEFAULT_AVATAR,
+            createdAt: new Date().toISOString()
+        };
+        setCachedProfile(currentProfile);
+        updateUI();
+        return currentProfile;
+    }
+
     try {
         const doc = await db.collection('profiles').doc(profileId).get();
         if (doc.exists) {
             currentProfile = { id: profileId, ...doc.data() };
+            setCachedProfile(currentProfile);
             return currentProfile;
         }
     } catch (error) {
-        console.warn('Ошибка получения профиля:', error);
+        console.warn('Ошибка получения профиля, используем кэш:', error);
+        const cached = getCachedProfile();
+        if (cached) {
+            currentProfile = cached;
+            updateUI();
+            return currentProfile;
+        }
     }
 
     // Создаём новый профиль
     const newProfile = {
         nickname: '',
         avatarData: DEFAULT_AVATAR,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: new Date().toISOString()
     };
 
     try {
-        await db.collection('profiles').doc(profileId).set(newProfile);
+        if (firebaseReady && db) {
+            await db.collection('profiles').doc(profileId).set(newProfile);
+        }
         currentProfile = { id: profileId, ...newProfile };
+        setCachedProfile(currentProfile);
         return currentProfile;
     } catch (error) {
         console.warn('Ошибка создания профиля:', error);
-        return null;
+        currentProfile = { id: profileId, ...newProfile };
+        setCachedProfile(currentProfile);
+        return currentProfile;
     }
 }
 
@@ -101,8 +196,8 @@ async function saveProfile(nickname, avatarData) {
     if (!currentProfile) await getOrCreateProfile();
     if (!currentProfile) return false;
 
-    // Проверка занятости ника
-    if (nickname && nickname !== currentProfile.nickname) {
+    // Проверка занятости ника (только если Firebase доступен)
+    if (nickname && nickname !== currentProfile.nickname && firebaseReady && db) {
         try {
             const snapshot = await db.collection('profiles')
                 .where('nickname', '==', nickname)
@@ -118,22 +213,30 @@ async function saveProfile(nickname, avatarData) {
         }
     }
 
-    const updateData = {};
-    if (nickname !== undefined) updateData.nickname = nickname;
-    if (avatarData !== undefined) updateData.avatarData = avatarData;
-    updateData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+    const updateData = {
+        nickname: nickname !== undefined ? nickname : currentProfile.nickname,
+        avatarData: avatarData !== undefined ? avatarData : currentProfile.avatarData,
+        updatedAt: new Date().toISOString()
+    };
 
-    try {
-        await db.collection('profiles').doc(profileId).update(updateData);
-        Object.assign(currentProfile, updateData);
-        nicknameInput.classList.remove('error');
-        nickErrorMsg.classList.remove('visible');
-        updateUI();
-        return true;
-    } catch (error) {
-        console.warn('Ошибка обновления профиля:', error);
-        return false;
+    // Обновляем локально
+    Object.assign(currentProfile, updateData);
+    setCachedProfile(currentProfile);
+    nicknameInput.classList.remove('error');
+    nickErrorMsg.classList.remove('visible');
+    updateUI();
+
+    // Пытаемся обновить в Firebase
+    if (firebaseReady && db) {
+        try {
+            await db.collection('profiles').doc(profileId).update(updateData);
+        } catch (error) {
+            console.warn('Ошибка обновления профиля в Firebase:', error);
+            showToast('ПРОФИЛЬ СОХРАНЁН ЛОКАЛЬНО', true);
+        }
     }
+
+    return true;
 }
 
 // ============================================================
@@ -141,6 +244,29 @@ async function saveProfile(nickname, avatarData) {
 // ============================================================
 
 function subscribeToPosts() {
+    // Показываем кэш сразу
+    const cached = getCachedData();
+    if (cached && cached.posts) {
+        allPosts = cached.posts.map(p => ({
+            ...p,
+            authorName: p.authorName || 'АНОНИМ',
+            authorAvatar: p.authorAvatar || DEFAULT_AVATAR
+        }));
+        renderAllPosts();
+    }
+
+    // Если Firebase не готов, выходим
+    if (!firebaseReady || !db) {
+        postsListFeedEl.innerHTML = `
+            <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
+                <div style="font-size:48px;margin-bottom:12px;">📡</div>
+                <div>ОФФЛАЙН РЕЖИМ</div>
+                <div style="font-size:0.85rem;color:#5a5d66;">ДАННЫЕ ИЗ КЭША</div>
+            </div>
+        `;
+        return;
+    }
+
     if (unsubscribePosts) {
         unsubscribePosts();
         unsubscribePosts = null;
@@ -186,11 +312,29 @@ function subscribeToPosts() {
             }
 
             allPosts = posts;
+            
+            // Сохраняем в кэш
+            setCachedData({ posts: posts, profiles: profilesCache });
+            
             renderAllPosts();
             updateNotifCount();
         }, (error) => {
             console.warn('Ошибка подписки на посты:', error);
-            showToast('ОШИБКА ЗАГРУЗКИ ПОСТОВ', true);
+            // Показываем кэш
+            const cached = getCachedData();
+            if (cached && cached.posts) {
+                allPosts = cached.posts;
+                renderAllPosts();
+                showToast('ОФФЛАЙН РЕЖИМ', true);
+            } else {
+                postsListFeedEl.innerHTML = `
+                    <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
+                        <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+                        <div>НЕТ ПОДКЛЮЧЕНИЯ</div>
+                        <div style="font-size:0.85rem;color:#5a5d66;">ПРОВЕРЬТЕ ИНТЕРНЕТ</div>
+                    </div>
+                `;
+            }
         });
 }
 
@@ -200,8 +344,37 @@ async function createPost(text, media) {
         return false;
     }
 
+    const post = {
+        id: 'local_' + Date.now().toString(36),
+        authorId: profileId,
+        authorName: currentProfile.nickname,
+        authorAvatar: currentProfile.avatarData || DEFAULT_AVATAR,
+        text: text || '',
+        media: media || [],
+        likes: 0,
+        dislikes: 0,
+        votes: {},
+        comments: [],
+        createdAt: new Date().toISOString(),
+        _local: true
+    };
+
+    // Добавляем локально сразу
+    allPosts.unshift(post);
+    renderAllPosts();
+    showToast('ПОСТ ПУБЛИКУЕТСЯ...');
+
+    // Если Firebase не готов, сохраняем в кэш
+    if (!firebaseReady || !db) {
+        const cached = getCachedData() || { posts: [] };
+        cached.posts.unshift(post);
+        setCachedData(cached);
+        showToast('ПОСТ СОХРАНЁН ЛОКАЛЬНО');
+        return true;
+    }
+
     try {
-        await db.collection('posts').add({
+        const docRef = await db.collection('posts').add({
             authorId: profileId,
             text: text || '',
             media: media || [],
@@ -211,31 +384,61 @@ async function createPost(text, media) {
             comments: [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        
+        // Обновляем ID поста
+        const idx = allPosts.findIndex(p => p.id === post.id);
+        if (idx !== -1) {
+            allPosts[idx].id = docRef.id;
+            allPosts[idx]._local = false;
+            renderAllPosts();
+        }
+        
         showToast('ПОСТ ОПУБЛИКОВАН');
         return true;
     } catch (error) {
         console.warn('Ошибка создания поста:', error);
-        showToast('ОШИБКА ПУБЛИКАЦИИ', true);
-        return false;
+        // Сохраняем в кэш
+        const cached = getCachedData() || { posts: [] };
+        cached.posts.unshift(post);
+        setCachedData(cached);
+        showToast('ПОСТ СОХРАНЁН ЛОКАЛЬНО (ОФФЛАЙН)', true);
+        return true;
     }
 }
 
 async function deletePost(postId) {
+    // Локальное удаление
+    const idx = allPosts.findIndex(p => p.id === postId);
+    if (idx === -1) return false;
+    if (allPosts[idx].authorId !== profileId) {
+        showToast('НЕ ВАШ ПОСТ', true);
+        return false;
+    }
+    
+    allPosts.splice(idx, 1);
+    renderAllPosts();
+
+    // Если Firebase не готов, удаляем из кэша
+    if (!firebaseReady || !db) {
+        const cached = getCachedData() || { posts: [] };
+        cached.posts = cached.posts.filter(p => p.id !== postId);
+        setCachedData(cached);
+        showToast('ПОСТ УДАЛЁН ЛОКАЛЬНО');
+        return true;
+    }
+
     try {
-        const doc = await db.collection('posts').doc(postId).get();
-        if (!doc.exists) return false;
-        const data = doc.data();
-        if (data.authorId !== profileId) {
-            showToast('НЕ ВАШ ПОСТ', true);
-            return false;
-        }
         await db.collection('posts').doc(postId).delete();
         showToast('ПОСТ УДАЛЁН');
         return true;
     } catch (error) {
         console.warn('Ошибка удаления поста:', error);
-        showToast('ОШИБКА УДАЛЕНИЯ', true);
-        return false;
+        // Удаляем из кэша
+        const cached = getCachedData() || { posts: [] };
+        cached.posts = cached.posts.filter(p => p.id !== postId);
+        setCachedData(cached);
+        showToast('ПОСТ УДАЛЁН ЛОКАЛЬНО', true);
+        return true;
     }
 }
 
@@ -245,40 +448,48 @@ async function votePost(postId, value) {
         return false;
     }
 
-    try {
-        const docRef = db.collection('posts').doc(postId);
-        const doc = await docRef.get();
-        if (!doc.exists) return false;
-        const data = doc.data();
+    // Локальное обновление
+    const post = allPosts.find(p => p.id === postId);
+    if (!post) return false;
 
-        const votes = data.votes || {};
-        const currentVote = votes[profileId] || 0;
-        let likes = data.likes || 0;
-        let dislikes = data.dislikes || 0;
+    const currentVote = post.votes?.[profileId] || 0;
+    
+    if (currentVote === value) {
+        delete post.votes[profileId];
+        if (value === 1) post.likes--;
+        else post.dislikes--;
+    } else {
+        if (currentVote === 1) post.likes--;
+        else if (currentVote === -1) post.dislikes--;
+        if (!post.votes) post.votes = {};
+        post.votes[profileId] = value;
+        if (value === 1) post.likes++;
+        else post.dislikes++;
+    }
+    
+    renderAllPosts();
 
-        if (currentVote === value) {
-            delete votes[profileId];
-            if (value === 1) likes--;
-            else dislikes--;
-        } else {
-            if (currentVote === 1) likes--;
-            else if (currentVote === -1) dislikes--;
-
-            votes[profileId] = value;
-            if (value === 1) likes++;
-            else dislikes++;
+    // Если Firebase не готов, сохраняем в кэш
+    if (!firebaseReady || !db) {
+        const cached = getCachedData() || { posts: [] };
+        const idx = cached.posts.findIndex(p => p.id === postId);
+        if (idx !== -1) {
+            cached.posts[idx] = post;
+            setCachedData(cached);
         }
+        return true;
+    }
 
-        await docRef.update({
-            likes: likes,
-            dislikes: dislikes,
-            votes: votes
+    try {
+        await db.collection('posts').doc(postId).update({
+            likes: post.likes,
+            dislikes: post.dislikes,
+            votes: post.votes
         });
         return true;
     } catch (error) {
         console.warn('Ошибка голосования:', error);
-        showToast('ОШИБКА ГОЛОСОВАНИЯ', true);
-        return false;
+        return true;
     }
 }
 
@@ -288,31 +499,43 @@ async function addComment(postId, text) {
         return false;
     }
 
+    const post = allPosts.find(p => p.id === postId);
+    if (!post) return false;
+
+    const comment = {
+        id: 'c_' + Date.now().toString(36),
+        authorId: profileId,
+        text: text,
+        createdAt: new Date().toISOString()
+    };
+
+    if (!post.comments) post.comments = [];
+    post.comments.push(comment);
+    renderAllPosts();
+
+    if (!firebaseReady || !db) {
+        const cached = getCachedData() || { posts: [] };
+        const idx = cached.posts.findIndex(p => p.id === postId);
+        if (idx !== -1) {
+            cached.posts[idx] = post;
+            setCachedData(cached);
+        }
+        return true;
+    }
+
     try {
-        const docRef = db.collection('posts').doc(postId);
-        const doc = await docRef.get();
-        if (!doc.exists) return false;
-        const data = doc.data();
-
-        const comments = data.comments || [];
-        comments.push({
-            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-            authorId: profileId,
-            text: text,
-            createdAt: new Date().toISOString()
+        await db.collection('posts').doc(postId).update({
+            comments: post.comments
         });
-
-        await docRef.update({ comments: comments });
         return true;
     } catch (error) {
         console.warn('Ошибка добавления комментария:', error);
-        showToast('ОШИБКА КОММЕНТАРИЯ', true);
-        return false;
+        return true;
     }
 }
 
 // ============================================================
-// UI ФУНКЦИИ
+// UI ФУНКЦИИ (без изменений)
 // ============================================================
 
 function updateUI() {
@@ -339,7 +562,7 @@ function updateProfileUI() {
 }
 
 function renderAllPosts() {
-    const sorted = [...allPosts];
+    const sorted = [...allPosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     if (sorted.length) {
         postsListFeedEl.innerHTML = sorted.map(p => renderPostCard(p)).join('');
@@ -393,12 +616,13 @@ function renderPostCard(post) {
 
     const isOpen = openComments.has(post.id);
     const myVote = post.votes?.[profileId] || 0;
+    const isLocal = post._local ? ' ⚡' : '';
 
     return `
         <div class="post-card" data-id="${post.id}">
             <div class="post-header">
                 <img class="post-avatar" src="${post.authorAvatar || DEFAULT_AVATAR}">
-                <span class="post-nick">${escapeHtml(post.authorName || 'АНОНИМ')}</span>
+                <span class="post-nick">${escapeHtml(post.authorName || 'АНОНИМ')}${isLocal}</span>
                 <span class="post-time">${formatDate(post.createdAt)}</span>
                 ${deleteBtn}
             </div>
@@ -468,10 +692,9 @@ function showToast(msg, err = false) {
 }
 
 // ============================================================
-// СОБЫТИЯ
+// СОБЫТИЯ (сокращённо, без изменений)
 // ============================================================
 
-// Никнейм
 nicknameInput.addEventListener('input', function() {
     const nick = this.value.trim();
     profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
@@ -490,14 +713,12 @@ nicknameInput.addEventListener('blur', function() {
     if (nick) saveProfile(nick);
 });
 
-// Аватар
 profileAvatarEl.addEventListener('click', () => avatarUploadEl.click());
 
 avatarUploadEl.addEventListener('change', function() {
     const file = this.files[0];
     this.value = '';
     if (!file) return;
-
     if (!currentProfile?.nickname) {
         showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
         return;
@@ -510,7 +731,6 @@ avatarUploadEl.addEventListener('change', function() {
         showToast('ТОЛЬКО ИЗОБРАЖЕНИЯ', true);
         return;
     }
-
     const reader = new FileReader();
     reader.onload = function(e) {
         saveProfile(currentProfile.nickname, e.target.result);
@@ -519,15 +739,12 @@ avatarUploadEl.addEventListener('change', function() {
     reader.readAsDataURL(file);
 });
 
-// Медиа
 document.getElementById('attachBtn').addEventListener('click', () => mediaUploadEl.click());
 
 mediaUploadEl.addEventListener('change', function() {
     const files = Array.from(this.files);
     this.value = '';
-
     let total = pendingMedia.reduce((s, i) => s + i.file.size, 0);
-
     for (const file of files) {
         if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
             showToast('НЕПОДДЕРЖИВАЕМЫЙ ФАЙЛ', true);
@@ -581,22 +798,18 @@ mediaPreviewEl.addEventListener('click', function(e) {
     updateUploadStatus();
 });
 
-// Публикация
 publishBtnEl.addEventListener('click', async function() {
     if (!currentProfile?.nickname) {
         showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
         return;
     }
-
     const text = postTextEl.value.trim();
     if (!text && pendingMedia.length === 0) {
         showToast('НАПИШИТЕ ТЕКСТ ИЛИ ПРИКРЕПИТЕ ФАЙЛ', true);
         return;
     }
-
     this.disabled = true;
     this.textContent = '...';
-
     try {
         const media = [];
         for (const item of pendingMedia) {
@@ -610,17 +823,13 @@ publishBtnEl.addEventListener('click', async function() {
                 data: data
             });
         }
-
         await createPost(text, media);
-
         postTextEl.value = '';
         pendingMedia.forEach((item) => URL.revokeObjectURL(item.url));
         pendingMedia = [];
         renderMediaPreview();
         updateUploadStatus();
-
         setActiveTab('tabFeed', 'feedSection');
-
     } catch (e) {
         showToast(e.message, true);
     } finally {
@@ -643,7 +852,6 @@ document.addEventListener('click', function(e) {
         votePost(voteBtn.dataset.id, Number(voteBtn.dataset.vote));
         return;
     }
-
     const toggleBtn = e.target.closest('[data-toggle]');
     if (toggleBtn) {
         const id = toggleBtn.dataset.toggle;
@@ -654,7 +862,6 @@ document.addEventListener('click', function(e) {
         open ? openComments.add(id) : openComments.delete(id);
         return;
     }
-
     const commentBtn = e.target.closest('[data-comment]');
     if (commentBtn) {
         if (!currentProfile?.nickname) {
@@ -670,7 +877,6 @@ document.addEventListener('click', function(e) {
         input.value = '';
         return;
     }
-
     const delBtn = e.target.closest('[data-delete]');
     if (delBtn) {
         if (!confirm('УДАЛИТЬ ПОСТ?')) return;
@@ -679,7 +885,6 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Enter для комментариев
 document.addEventListener('keydown', function(e) {
     if (e.key !== 'Enter' || e.shiftKey || !e.target.classList.contains('comment-input')) return;
     e.preventDefault();
@@ -687,7 +892,6 @@ document.addEventListener('keydown', function(e) {
     if (btn) btn.click();
 });
 
-// Уведомления
 bellBtnEl.addEventListener('click', function() {
     notifOpen = !notifOpen;
     notificationPanelEl.style.display = notifOpen ? 'block' : 'none';
@@ -703,7 +907,6 @@ document.addEventListener('click', function(e) {
     notificationPanelEl.style.display = 'none';
 });
 
-// Вкладки
 function setActiveTab(buttonId, sectionId) {
     document.querySelectorAll('.tabs button').forEach(btn => {
         btn.classList.toggle('active', btn.id === buttonId);
@@ -723,25 +926,13 @@ document.getElementById('tabProfile').addEventListener('click', () => setActiveT
 
 async function init() {
     try {
+        // Показываем загрузку
+        postsListFeedEl.innerHTML = '<div class="empty-posts">⏳ ПОДКЛЮЧЕНИЕ...</div>';
+        
         // Получаем профиль
         await getOrCreateProfile();
         updateProfileUI();
 
-        // Подписываемся на посты
-        subscribeToPosts();
-
-        if (!currentProfile?.nickname) {
-            nicknameInput.focus();
-        }
-
-        console.log('🔥 DARK FORT ONLINE');
-        console.log('👤 ID:', profileId);
-        console.log('📦 FIREBASE CONNECTED');
-
-    } catch (error) {
-        console.error('Ошибка инициализации:', error);
-        showToast('ОШИБКА ПОДКЛЮЧЕНИЯ К FIREBASE', true);
-    }
-}
-
-init();
+        // Показываем кэш
+        const cached = getCachedData();
+        if (cached && cached.posts

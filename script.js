@@ -1,19 +1,31 @@
-// Firebase configuration
+// ============================================================
+// DARK FORT - FIREBASE (ОДИН КОНФИГ)
+// ============================================================
+
+// ============================================================
+// 🔥 ЕДИНЫЙ КОНФИГ FIREBASE (из вашего config.js)
+// ============================================================
+
 const firebaseConfig = {
-    apiKey: "AIzaSyDZjG_HhLrFGhRQyJqLQRgVRhMoMCrEGfY",
-    authDomain: "dark-fort.firebaseapp.com",
-    projectId: "dark-fort",
-    storageBucket: "dark-fort.appspot.com",
-    messagingSenderId: "123456789012",
-    appId: "1:123456789012:web:abc123def456ghi789"
+    apiKey: "AIzaSyBa9NWi5FfpmAx0ExJh1fJ3b1ipUEEBRxU",
+    authDomain: "dark-fortport.firebaseapp.com",
+    projectId: "dark-fortport",
+    storageBucket: "dark-fortport.firebasestorage.app",
+    messagingSenderId: "3814531503",
+    appId: "1:3814531503:web:a8200e1f337935a3530f5a",
+    measurementId: "G-KF9GGGL43L"
 };
 
-// Initialize Firebase
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ FIREBASE
+// ============================================================
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Enable offline persistence
+// Включаем оффлайн-режим
 db.enablePersistence()
+    .then(() => console.log('🔥 Offline persistence enabled'))
     .catch((err) => {
         if (err.code == 'failed-precondition') {
             console.warn('Оффлайн-режим: несколько вкладок открыто');
@@ -22,820 +34,757 @@ db.enablePersistence()
         }
     });
 
-// ============ GLOBAL STATE ============
-let currentUser = {
-    uid: generateUID(),
-    nickname: '',
-    avatar: 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg'
-};
+// ============================================================
+// КОНСТАНТЫ
+// ============================================================
 
-let notifications = [];
-let currentTab = 'feed';
-let editingPostId = null;
+const DEFAULT_AVATAR = 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg';
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
-// ============ DOM ELEMENTS ============
-const profileAvatar = document.getElementById('profileAvatar');
-const avatarUpload = document.getElementById('avatarUpload');
+// --- ID ПОЛЬЗОВАТЕЛЯ ---
+let profileId = localStorage.getItem('df_profile_id');
+if (!profileId) {
+    profileId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    localStorage.setItem('df_profile_id', profileId);
+}
+
+// --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
+let currentProfile = null;
+let allPosts = [];
+let pendingMedia = [];
+let saveTimer = 0;
+let notifOpen = false;
+const openComments = new Set();
+let unsubscribePosts = null;
+
+// --- DOM ЭЛЕМЕНТЫ ---
 const nicknameInput = document.getElementById('nicknameInput');
+const profileAvatarEl = document.getElementById('profileAvatar');
+const profileBigAvatarEl = document.getElementById('profileBigAvatar');
+const profileNicknameEl = document.getElementById('profileNickname');
+const avatarUploadEl = document.getElementById('avatarUpload');
+const bellBtnEl = document.getElementById('bellBtn');
+const notifCountEl = document.getElementById('notifCount');
+const notificationPanelEl = document.getElementById('notificationPanel');
 const nickErrorMsg = document.getElementById('nickErrorMsg');
-const bellBtn = document.getElementById('bellBtn');
-const notifCount = document.getElementById('notifCount');
-const notificationPanel = document.getElementById('notificationPanel');
-const postsListFeed = document.getElementById('postsListFeed');
-const postsListProfile = document.getElementById('postsListProfile');
-const postText = document.getElementById('postText');
-const mediaPreview = document.getElementById('mediaPreview');
-const attachBtn = document.getElementById('attachBtn');
-const mediaUpload = document.getElementById('mediaUpload');
-const uploadStatus = document.getElementById('uploadStatus');
-const publishBtn = document.getElementById('publishBtn');
-const profileBigAvatar = document.getElementById('profileBigAvatar');
-const profileNickname = document.getElementById('profileNickname');
+const postTextEl = document.getElementById('postText');
+const mediaUploadEl = document.getElementById('mediaUpload');
+const mediaPreviewEl = document.getElementById('mediaPreview');
+const publishBtnEl = document.getElementById('publishBtn');
+const uploadStatusEl = document.getElementById('uploadStatus');
+const postsListFeedEl = document.getElementById('postsListFeed');
+const postsListProfileEl = document.getElementById('postsListProfile');
 
-let mediaFiles = [];
+// ============================================================
+// КЭШ
+// ============================================================
 
-// ============ UTILITY FUNCTIONS ============
-function generateUID() {
-    return 'user_' + Math.random().toString(36).substr(2, 9);
+function getCachedProfile() {
+    try {
+        const raw = localStorage.getItem('df_profile_cache');
+        if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
 }
 
-function showToast(message, isError = false) {
-    const toast = document.createElement('div');
-    toast.className = 'toast' + (isError ? ' error' : '');
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+function setCachedProfile(profile) {
+    try {
+        localStorage.setItem('df_profile_cache', JSON.stringify(profile));
+    } catch (e) {}
 }
 
-function formatDate(timestamp) {
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const now = new Date();
-    const diff = now - date;
-    
-    if (diff < 60000) return 'Только что';
-    if (diff < 3600000) return Math.floor(diff / 60000) + ' мин. назад';
-    if (diff < 86400000) return Math.floor(diff / 3600000) + ' ч. назад';
-    
-    return date.toLocaleDateString('ru-RU', { 
-        day: 'numeric', 
-        month: 'short', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    });
-}
+// ============================================================
+// ПРОФИЛЬ
+// ============================================================
 
-function compressImage(file, maxWidth = 800) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-                
-                if (width > maxWidth) {
-                    height = (maxWidth / width) * height;
-                    width = maxWidth;
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                canvas.toBlob((blob) => {
-                    resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-                }, 'image/jpeg', 0.7);
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
-// ============ LOCAL STORAGE ============
-function saveUserToLocal() {
-    localStorage.setItem('darkfort_user', JSON.stringify(currentUser));
-}
-
-function loadUserFromLocal() {
-    const saved = localStorage.getItem('darkfort_user');
-    if (saved) {
-        currentUser = JSON.parse(saved);
-        nicknameInput.value = currentUser.nickname;
-        profileAvatar.src = currentUser.avatar;
-        profileBigAvatar.src = currentUser.avatar;
-        profileNickname.textContent = currentUser.nickname || 'ТВОЙ НИК';
+async function getOrCreateProfile() {
+    // Сначала пробуем кэш
+    const cached = getCachedProfile();
+    if (cached) {
+        currentProfile = cached;
+        updateProfileUI();
     }
-}
 
-function saveNotificationsToLocal() {
-    localStorage.setItem('darkfort_notifications', JSON.stringify(notifications));
-}
-
-function loadNotificationsFromLocal() {
-    const saved = localStorage.getItem('darkfort_notifications');
-    if (saved) {
-        notifications = JSON.parse(saved);
-        updateNotificationUI();
+    try {
+        const doc = await db.collection('profiles').doc(profileId).get();
+        if (doc.exists) {
+            currentProfile = { id: profileId, ...doc.data() };
+            setCachedProfile(currentProfile);
+            updateProfileUI();
+            return currentProfile;
+        }
+    } catch (error) {
+        console.warn('Ошибка получения профиля:', error);
+        if (currentProfile) return currentProfile;
     }
-}
 
-// ============ NOTIFICATIONS ============
-function addNotification(type, data) {
-    const notification = {
-        id: Date.now().toString(),
-        type: type,
-        data: data,
-        timestamp: new Date().toISOString(),
-        read: false
+    // Создаём новый профиль
+    const newProfile = {
+        nickname: '',
+        avatarData: DEFAULT_AVATAR,
+        createdAt: new Date().toISOString()
     };
-    
-    notifications.unshift(notification);
-    if (notifications.length > 50) notifications.pop();
-    
-    saveNotificationsToLocal();
-    updateNotificationUI();
-}
 
-function updateNotificationUI() {
-    const unreadCount = notifications.filter(n => !n.read).length;
-    notifCount.textContent = unreadCount;
-    
-    if (unreadCount > 0) {
-        notifCount.classList.add('visible');
-    } else {
-        notifCount.classList.remove('visible');
-    }
-    
-    renderNotifications();
-}
-
-function renderNotifications() {
-    if (notifications.length === 0) {
-        notificationPanel.innerHTML = '<div class="notif-item">Нет уведомлений</div>';
-        return;
-    }
-    
-    notificationPanel.innerHTML = notifications.slice(0, 20).map(n => {
-        const time = new Date(n.timestamp);
-        const timeStr = formatDate(time);
-        
-        let message = '';
-        switch(n.type) {
-            case 'like':
-                message = `❤️ ${n.data.nickname} лайкнул ваш пост`;
-                break;
-            case 'dislike':
-                message = `👎 ${n.data.nickname} дизлайкнул ваш пост`;
-                break;
-            case 'comment':
-                message = `💬 ${n.data.nickname} прокомментировал ваш пост`;
-                break;
-            default:
-                message = 'Новое уведомление';
-        }
-        
-        return `<div class="notif-item">
-            ${message}
-            <span class="notif-time">${timeStr}</span>
-        </div>`;
-    }).join('');
-}
-
-// ============ USER ACTIONS ============
-nicknameInput.addEventListener('input', () => {
-    const nickname = nicknameInput.value.trim();
-    if (nickname.length > 0) {
-        checkNicknameAvailability(nickname);
-    } else {
-        nickErrorMsg.classList.remove('visible');
-    }
-});
-
-async function checkNicknameAvailability(nickname) {
     try {
-        const snapshot = await db.collection('users')
-            .where('nickname', '==', nickname)
-            .get();
-        
-        if (!snapshot.empty && snapshot.docs[0].id !== currentUser.uid) {
-            nickErrorMsg.classList.add('visible');
-            publishBtn.disabled = true;
-        } else {
-            nickErrorMsg.classList.remove('visible');
-            if (nickname.length >= 2) {
-                publishBtn.disabled = false;
+        await db.collection('profiles').doc(profileId).set(newProfile);
+    } catch (error) {
+        console.warn('Ошибка создания профиля:', error);
+    }
+
+    currentProfile = { id: profileId, ...newProfile };
+    setCachedProfile(currentProfile);
+    updateProfileUI();
+    return currentProfile;
+}
+
+async function saveProfile(nickname, avatarData) {
+    if (!currentProfile) await getOrCreateProfile();
+    if (!currentProfile) return false;
+
+    // Проверка занятости
+    if (nickname && nickname !== currentProfile.nickname) {
+        try {
+            const snapshot = await db.collection('profiles')
+                .where('nickname', '==', nickname)
+                .get();
+            if (!snapshot.empty) {
+                nicknameInput.classList.add('error');
+                nickErrorMsg.classList.add('visible');
+                return false;
             }
+        } catch (error) {
+            console.warn('Ошибка проверки ника:', error);
         }
+    }
+
+    const updateData = {};
+    if (nickname !== undefined) updateData.nickname = nickname;
+    if (avatarData !== undefined) updateData.avatarData = avatarData;
+    updateData.updatedAt = new Date().toISOString();
+
+    // Обновляем локально
+    Object.assign(currentProfile, updateData);
+    setCachedProfile(currentProfile);
+    nicknameInput.classList.remove('error');
+    nickErrorMsg.classList.remove('visible');
+    updateProfileUI();
+
+    // Обновляем в Firebase
+    try {
+        await db.collection('profiles').doc(profileId).update(updateData);
+        return true;
     } catch (error) {
-        console.error('Ошибка проверки ника:', error);
+        console.warn('Ошибка сохранения профиля:', error);
+        showToast('ПРОФИЛЬ СОХРАНЁН ЛОКАЛЬНО', true);
+        return true;
     }
 }
 
-async function saveNickname() {
-    const nickname = nicknameInput.value.trim();
-    if (!nickname || nickname.length < 2) return;
-    
-    try {
-        // Check if nickname is taken
-        const snapshot = await db.collection('users')
-            .where('nickname', '==', nickname)
-            .get();
-        
-        if (!snapshot.empty && snapshot.docs[0].id !== currentUser.uid) {
-            nickErrorMsg.classList.add('visible');
-            showToast('Этот ник уже занят', true);
-            return;
-        }
-        
-        // Save to Firestore
-        await db.collection('users').doc(currentUser.uid).set({
-            nickname: nickname,
-            avatar: currentUser.avatar,
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        
-        currentUser.nickname = nickname;
-        saveUserToLocal();
-        profileNickname.textContent = nickname;
-        nickErrorMsg.classList.remove('visible');
-        showToast('Ник сохранён!');
-        
-        // Update all posts by this user
-        updateUserPostsNickname(nickname);
-    } catch (error) {
-        console.error('Ошибка сохранения ника:', error);
-        showToast('Ошибка сохранения', true);
+// ============================================================
+// ПОСТЫ
+// ============================================================
+
+function subscribeToPosts() {
+    if (unsubscribePosts) {
+        unsubscribePosts();
+        unsubscribePosts = null;
     }
-}
 
-async function updateUserPostsNickname(newNickname) {
-    try {
-        const snapshot = await db.collection('posts')
-            .where('authorId', '==', currentUser.uid)
-            .get();
-        
-        const batch = db.batch();
-        snapshot.docs.forEach(doc => {
-            batch.update(doc.ref, { 
-                authorNick: newNickname,
-                authorAvatar: currentUser.avatar
-            });
-        });
-        
-        await batch.commit();
-    } catch (error) {
-        console.error('Ошибка обновления постов:', error);
-    }
-}
+    // Показываем загрузку
+    postsListFeedEl.innerHTML = '<div class="empty-posts">⏳ ЗАГРУЗКА...</div>';
 
-profileAvatar.addEventListener('click', () => {
-    avatarUpload.click();
-});
+    unsubscribePosts = db.collection('posts')
+        .orderBy('createdAt', 'desc')
+        .limit(100)
+        .onSnapshot(async (snapshot) => {
+            const posts = [];
+            const profilesCache = {};
 
-avatarUpload.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    try {
-        // Compress image
-        const compressed = await compressImage(file, 200);
-        const reader = new FileReader();
-        
-        reader.onload = async (event) => {
-            const avatarUrl = event.target.result;
-            
-            // Update UI
-            profileAvatar.src = avatarUrl;
-            profileBigAvatar.src = avatarUrl;
-            currentUser.avatar = avatarUrl;
-            saveUserToLocal();
-            
-            // Save to Firestore
-            if (currentUser.nickname) {
-                await db.collection('users').doc(currentUser.uid).update({
-                    avatar: avatarUrl
+            for (const doc of snapshot.docs) {
+                const data = doc.data();
+                const postId = doc.id;
+
+                let authorName = 'АНОНИМ';
+                let authorAvatar = DEFAULT_AVATAR;
+
+                if (data.authorId) {
+                    if (profilesCache[data.authorId]) {
+                        authorName = profilesCache[data.authorId].nickname || 'АНОНИМ';
+                        authorAvatar = profilesCache[data.authorId].avatarData || DEFAULT_AVATAR;
+                    } else {
+                        try {
+                            const authorDoc = await db.collection('profiles').doc(data.authorId).get();
+                            if (authorDoc.exists) {
+                                const authorData = authorDoc.data();
+                                profilesCache[data.authorId] = authorData;
+                                authorName = authorData.nickname || 'АНОНИМ';
+                                authorAvatar = authorData.avatarData || DEFAULT_AVATAR;
+                            }
+                        } catch (e) {}
+                    }
+                }
+
+                posts.push({
+                    id: postId,
+                    ...data,
+                    authorName: authorName,
+                    authorAvatar: authorAvatar
                 });
             }
-            
-            // Update all posts
-            updateUserPostsAvatar(avatarUrl);
-            showToast('Аватар обновлён!');
-        };
-        
-        reader.readAsDataURL(compressed);
-    } catch (error) {
-        console.error('Ошибка загрузки аватара:', error);
-        showToast('Ошибка загрузки', true);
-    }
-});
 
-async function updateUserPostsAvatar(newAvatar) {
-    try {
-        const snapshot = await db.collection('posts')
-            .where('authorId', '==', currentUser.uid)
-            .get();
-        
-        const batch = db.batch();
-        snapshot.docs.forEach(doc => {
-            batch.update(doc.ref, { authorAvatar: newAvatar });
+            allPosts = posts;
+            renderAllPosts();
+            updateNotifCount();
+        }, (error) => {
+            console.warn('Ошибка подписки на посты:', error);
+            postsListFeedEl.innerHTML = `
+                <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
+                    <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+                    <div>ОШИБКА ПОДКЛЮЧЕНИЯ</div>
+                    <div style="font-size:0.85rem;color:#5a5d66;">ПРОВЕРЬТЕ ИНТЕРНЕТ</div>
+                    <button onclick="subscribeToPosts()" style="margin-top:12px;padding:6px 16px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+                </div>
+            `;
         });
-        
-        await batch.commit();
-    } catch (error) {
-        console.error('Ошибка обновления аватаров в постах:', error);
-    }
 }
 
-// ============ MEDIA HANDLING ============
-attachBtn.addEventListener('click', () => {
-    mediaUpload.click();
-});
-
-mediaUpload.addEventListener('change', (e) => {
-    const files = Array.from(e.target.files);
-    
-    files.forEach(file => {
-        if (mediaFiles.length >= 4) {
-            showToast('Максимум 4 файла', true);
-            return;
-        }
-        
-        if (file.size > 10 * 1024 * 1024) {
-            showToast('Файл слишком большой (макс. 10MB)', true);
-            return;
-        }
-        
-        mediaFiles.push(file);
-        renderMediaPreview();
-    });
-    
-    mediaUpload.value = '';
-});
-
-function renderMediaPreview() {
-    mediaPreview.innerHTML = mediaFiles.map((file, index) => {
-        const url = URL.createObjectURL(file);
-        const isVideo = file.type.startsWith('video/');
-        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-        
-        return `<div class="preview-item">
-            ${isVideo ? 
-                `<video src="${url}" muted></video>` : 
-                `<img src="${url}" alt="preview">`
-            }
-            <div class="preview-size">${sizeMB}MB</div>
-            <button class="remove-media" onclick="removeMedia(${index})">×</button>
-        </div>`;
-    }).join('');
-}
-
-function removeMedia(index) {
-    mediaFiles.splice(index, 1);
-    renderMediaPreview();
-}
-
-// ============ POSTS ============
-publishBtn.addEventListener('click', publishPost);
-
-async function publishPost() {
-    const text = postText.value.trim();
-    const nickname = nicknameInput.value.trim();
-    
-    if (!nickname || nickname.length < 2) {
-        showToast('Введите никнейм', true);
-        return;
+async function createPost(text, media) {
+    if (!currentProfile?.nickname) {
+        showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
+        return false;
     }
-    
-    if (nickErrorMsg.classList.contains('visible')) {
-        showToast('Этот ник занят', true);
-        return;
-    }
-    
-    if (!text && mediaFiles.length === 0) {
-        showToast('Напишите текст или прикрепите файл', true);
-        return;
-    }
-    
-    publishBtn.disabled = true;
-    uploadStatus.textContent = 'Публикация...';
-    
+
     try {
-        // Save nickname first
-        await saveNickname();
-        
-        // Process media files
-        const mediaUrls = await Promise.all(
-            mediaFiles.map(async (file) => {
-                return await fileToBase64(file);
-            })
-        );
-        
-        const post = {
-            authorId: currentUser.uid,
-            authorNick: currentUser.nickname,
-            authorAvatar: currentUser.avatar,
-            text: text,
-            media: mediaUrls,
-            mediaTypes: mediaFiles.map(f => f.type),
-            likes: [],
-            dislikes: [],
+        await db.collection('posts').add({
+            authorId: profileId,
+            text: text || '',
+            media: media || [],
+            likes: 0,
+            dislikes: 0,
+            votes: {},
             comments: [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        if (editingPostId) {
-            // Update existing post
-            await db.collection('posts').doc(editingPostId).update({
-                text: text,
-                media: mediaUrls,
-                mediaTypes: mediaFiles.map(f => f.type),
-                editedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            editingPostId = null;
-            publishBtn.textContent = 'ОПУБЛИКОВАТЬ';
-            showToast('Пост обновлён!');
-        } else {
-            // Create new post
-            await db.collection('posts').add(post);
-            showToast('Пост опубликован!');
-        }
-        
-        // Clear form
-        postText.value = '';
-        mediaFiles = [];
-        mediaPreview.innerHTML = '';
-        uploadStatus.textContent = '';
-        
-    } catch (error) {
-        console.error('Ошибка публикации:', error);
-        showToast('Ошибка публикации', true);
-    } finally {
-        publishBtn.disabled = false;
-    }
-}
-
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-}
-
-// ============ LOAD POSTS ============
-function loadPosts(container, filterByUser = false) {
-    let query = db.collection('posts').orderBy('createdAt', 'desc');
-    
-    if (filterByUser) {
-        query = query.where('authorId', '==', currentUser.uid);
-    }
-    
-    query.onSnapshot((snapshot) => {
-        const posts = [];
-        snapshot.forEach((doc) => {
-            posts.push({ id: doc.id, ...doc.data() });
         });
-        
-        renderPosts(container, posts, filterByUser);
-    }, (error) => {
-        console.error('Ошибка загрузки постов:', error);
-        container.innerHTML = '<div class="empty-posts">ОШИБКА ЗАГРУЗКИ</div>';
-    });
-}
-
-function renderPosts(container, posts, isProfile = false) {
-    if (posts.length === 0) {
-        container.innerHTML = '<div class="empty-posts">НЕТ ПОСТОВ</div>';
-        return;
-    }
-    
-    container.innerHTML = posts.map(post => {
-        const isOwner = post.authorId === currentUser.uid;
-        const hasLiked = post.likes && post.likes.includes(currentUser.uid);
-        const hasDisliked = post.dislikes && post.dislikes.includes(currentUser.uid);
-        const likeCount = post.likes ? post.likes.length : 0;
-        const dislikeCount = post.dislikes ? post.dislikes.length : 0;
-        const commentCount = post.comments ? post.comments.length : 0;
-        
-        return `
-            <div class="post-card" id="post-${post.id}">
-                <div class="post-header">
-                    <img class="post-avatar" src="${post.authorAvatar || 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg'}" alt="avatar">
-                    <span class="post-nick">${post.authorNick || 'Аноним'}</span>
-                    <span class="post-time">${post.createdAt ? formatDate(post.createdAt) : ''}</span>
-                    ${isOwner ? `<button class="delete-post-btn" onclick="deletePost('${post.id}')">×</button>` : ''}
-                </div>
-                ${post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : ''}
-                ${post.media && post.media.length > 0 ? renderPostMedia(post) : ''}
-                <div class="post-footer">
-                    <button class="vote-btn ${hasLiked ? 'liked' : ''}" onclick="likePost('${post.id}')">
-                        ❤️ ${likeCount}
-                    </button>
-                    <button class="vote-btn ${hasDisliked ? 'disliked' : ''}" onclick="dislikePost('${post.id}')">
-                        👎 ${dislikeCount}
-                    </button>
-                    <button class="comment-btn" onclick="toggleComments('${post.id}')">
-                        💬 ${commentCount}
-                    </button>
-                    ${isOwner ? `<button class="comment-btn" onclick="editPost('${post.id}')">✏️</button>` : ''}
-                </div>
-                <div class="comments-section" id="comments-${post.id}">
-                    ${renderComments(post)}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderPostMedia(post) {
-    return `
-        <div class="post-media">
-            ${post.media.map((url, index) => {
-                const type = post.mediaTypes ? post.mediaTypes[index] : 'image/jpeg';
-                if (type && type.startsWith('video/')) {
-                    return `<video src="${url}" controls></video>`;
-                } else {
-                    return `<img src="${url}" alt="media" loading="lazy">`;
-                }
-            }).join('')}
-        </div>
-    `;
-}
-
-function renderComments(post) {
-    if (!post.comments || post.comments.length === 0) {
-        return '<div style="padding:10px;color:var(--muted);">Нет комментариев</div>';
-    }
-    
-    return post.comments.map(comment => `
-        <div class="comment">
-            <img class="comment-avatar" src="${comment.avatar || 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg'}" alt="avatar">
-            <div class="comment-content">
-                <div class="comment-nick">${comment.nickname || 'Аноним'}</div>
-                <div class="comment-text">${escapeHtml(comment.text)}</div>
-            </div>
-        </div>
-    `).join('') + `
-        <div class="comment-input-row">
-            <input type="text" class="comment-input" id="comment-input-${post.id}" placeholder="Комментарий..." maxlength="500">
-            <button class="btn add-comment-btn" onclick="addComment('${post.id}')">ОТПРАВИТЬ</button>
-        </div>
-    `;
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// ============ POST ACTIONS ============
-async function likePost(postId) {
-    if (!currentUser.nickname) {
-        showToast('Сначала введите ник', true);
-        return;
-    }
-    
-    try {
-        const postRef = db.collection('posts').doc(postId);
-        const post = await postRef.get();
-        const data = post.data();
-        
-        let likes = data.likes || [];
-        let dislikes = data.dislikes || [];
-        
-        if (likes.includes(currentUser.uid)) {
-            // Unlike
-            likes = likes.filter(id => id !== currentUser.uid);
-        } else {
-            // Like
-            likes.push(currentUser.uid);
-            dislikes = dislikes.filter(id => id !== currentUser.uid);
-            
-            // Notify post owner
-            if (data.authorId !== currentUser.uid) {
-                addNotification('like', {
-                    postId: postId,
-                    nickname: currentUser.nickname
-                });
-            }
-        }
-        
-        await postRef.update({ likes, dislikes });
+        showToast('ПОСТ ОПУБЛИКОВАН');
+        return true;
     } catch (error) {
-        console.error('Ошибка лайка:', error);
-    }
-}
-
-async function dislikePost(postId) {
-    if (!currentUser.nickname) {
-        showToast('Сначала введите ник', true);
-        return;
-    }
-    
-    try {
-        const postRef = db.collection('posts').doc(postId);
-        const post = await postRef.get();
-        const data = post.data();
-        
-        let likes = data.likes || [];
-        let dislikes = data.dislikes || [];
-        
-        if (dislikes.includes(currentUser.uid)) {
-            // Remove dislike
-            dislikes = dislikes.filter(id => id !== currentUser.uid);
-        } else {
-            // Dislike
-            dislikes.push(currentUser.uid);
-            likes = likes.filter(id => id !== currentUser.uid);
-            
-            // Notify post owner
-            if (data.authorId !== currentUser.uid) {
-                addNotification('dislike', {
-                    postId: postId,
-                    nickname: currentUser.nickname
-                });
-            }
-        }
-        
-        await postRef.update({ likes, dislikes });
-    } catch (error) {
-        console.error('Ошибка дизлайка:', error);
-    }
-}
-
-async function addComment(postId) {
-    if (!currentUser.nickname) {
-        showToast('Сначала введите ник', true);
-        return;
-    }
-    
-    const input = document.getElementById(`comment-input-${postId}`);
-    if (!input) return;
-    
-    const text = input.value.trim();
-    if (!text) return;
-    
-    try {
-        const postRef = db.collection('posts').doc(postId);
-        const post = await postRef.get();
-        const data = post.data();
-        
-        const comments = data.comments || [];
-        comments.push({
-            nickname: currentUser.nickname,
-            avatar: currentUser.avatar,
-            text: text,
-            timestamp: new Date().toISOString()
-        });
-        
-        await postRef.update({ comments });
-        input.value = '';
-        
-        // Notify post owner
-        if (data.authorId !== currentUser.uid) {
-            addNotification('comment', {
-                postId: postId,
-                nickname: currentUser.nickname
-            });
-        }
-    } catch (error) {
-        console.error('Ошибка комментария:', error);
+        console.warn('Ошибка создания поста:', error);
+        showToast('ОШИБКА ПУБЛИКАЦИИ', true);
+        return false;
     }
 }
 
 async function deletePost(postId) {
-    if (!confirm('Удалить пост?')) return;
-    
     try {
+        const doc = await db.collection('posts').doc(postId).get();
+        if (!doc.exists) return false;
+        const data = doc.data();
+        if (data.authorId !== profileId) {
+            showToast('НЕ ВАШ ПОСТ', true);
+            return false;
+        }
         await db.collection('posts').doc(postId).delete();
-        showToast('Пост удалён');
+        showToast('ПОСТ УДАЛЁН');
+        return true;
     } catch (error) {
-        console.error('Ошибка удаления:', error);
-        showToast('Ошибка удаления', true);
+        console.warn('Ошибка удаления поста:', error);
+        showToast('ОШИБКА УДАЛЕНИЯ', true);
+        return false;
     }
 }
 
-async function editPost(postId) {
+async function votePost(postId, value) {
+    if (!currentProfile?.nickname) {
+        showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
+        return false;
+    }
+
     try {
-        const post = await db.collection('posts').doc(postId).get();
-        const data = post.data();
-        
-        // Switch to create tab
-        switchTab('create');
-        
-        // Fill form
-        postText.value = data.text || '';
-        editingPostId = postId;
-        publishBtn.textContent = 'СОХРАНИТЬ';
-        
-        // Clear media preview (editing media not supported in this simple version)
-        mediaFiles = [];
-        mediaPreview.innerHTML = '';
-        
-        showToast('Редактирование поста');
-    } catch (error) {
-        console.error('Ошибка редактирования:', error);
-    }
-}
+        const docRef = db.collection('posts').doc(postId);
+        const doc = await docRef.get();
+        if (!doc.exists) return false;
+        const data = doc.data();
 
-function toggleComments(postId) {
-    const commentsSection = document.getElementById(`comments-${postId}`);
-    if (commentsSection) {
-        if (commentsSection.style.display === 'block') {
-            commentsSection.style.display = 'none';
+        const votes = data.votes || {};
+        const currentVote = votes[profileId] || 0;
+        let likes = data.likes || 0;
+        let dislikes = data.dislikes || 0;
+
+        if (currentVote === value) {
+            delete votes[profileId];
+            if (value === 1) likes--;
+            else dislikes--;
         } else {
-            commentsSection.style.display = 'block';
+            if (currentVote === 1) likes--;
+            else if (currentVote === -1) dislikes--;
+            votes[profileId] = value;
+            if (value === 1) likes++;
+            else dislikes++;
         }
+
+        await docRef.update({ likes, dislikes, votes });
+        return true;
+    } catch (error) {
+        console.warn('Ошибка голосования:', error);
+        showToast('ОШИБКА ГОЛОСОВАНИЯ', true);
+        return false;
     }
 }
 
-// ============ TABS ============
-const tabFeed = document.getElementById('tabFeed');
-const tabCreate = document.getElementById('tabCreate');
-const tabProfile = document.getElementById('tabProfile');
-const feedSection = document.getElementById('feedSection');
-const createSection = document.getElementById('createSection');
-const profileSection = document.getElementById('profileSection');
+async function addComment(postId, text) {
+    if (!currentProfile?.nickname) {
+        showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
+        return false;
+    }
 
-tabFeed.addEventListener('click', () => switchTab('feed'));
-tabCreate.addEventListener('click', () => switchTab('create'));
-tabProfile.addEventListener('click', () => switchTab('profile'));
+    try {
+        const docRef = db.collection('posts').doc(postId);
+        const doc = await docRef.get();
+        if (!doc.exists) return false;
+        const data = doc.data();
 
-function switchTab(tab) {
-    currentTab = tab;
-    
-    // Update buttons
-    [tabFeed, tabCreate, tabProfile].forEach(btn => btn.classList.remove('active'));
-    [feedSection, createSection, profileSection].forEach(section => section.classList.remove('active'));
-    
-    switch(tab) {
-        case 'feed':
-            tabFeed.classList.add('active');
-            feedSection.classList.add('active');
-            break;
-        case 'create':
-            tabCreate.classList.add('active');
-            createSection.classList.add('active');
-            break;
-        case 'profile':
-            tabProfile.classList.add('active');
-            profileSection.classList.add('active');
-            break;
+        const comments = data.comments || [];
+        comments.push({
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+            authorId: profileId,
+            text: text,
+            createdAt: new Date().toISOString()
+        });
+
+        await docRef.update({ comments });
+        return true;
+    } catch (error) {
+        console.warn('Ошибка добавления комментария:', error);
+        showToast('ОШИБКА КОММЕНТАРИЯ', true);
+        return false;
     }
 }
 
-// ============ NOTIFICATION PANEL ============
-bellBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (notificationPanel.style.display === 'block') {
-        notificationPanel.style.display = 'none';
+// ============================================================
+// UI
+// ============================================================
+
+function updateProfileUI() {
+    if (!currentProfile) return;
+
+    const nick = document.activeElement === nicknameInput
+        ? nicknameInput.value.trim()
+        : (currentProfile.nickname || '');
+
+    if (document.activeElement !== nicknameInput) {
+        nicknameInput.value = nick;
+    }
+    profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
+
+    const avatar = currentProfile.avatarData || DEFAULT_AVATAR;
+    profileAvatarEl.src = avatar;
+    profileBigAvatarEl.src = avatar;
+}
+
+function renderAllPosts() {
+    const sorted = [...allPosts].sort((a, b) => {
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+        return dateB - dateA;
+    });
+
+    if (sorted.length) {
+        postsListFeedEl.innerHTML = sorted.map(p => renderPostCard(p)).join('');
     } else {
-        notificationPanel.style.display = 'block';
-        // Mark all as read
-        notifications.forEach(n => n.read = true);
-        saveNotificationsToLocal();
-        updateNotificationUI();
+        postsListFeedEl.innerHTML = `
+            <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
+                <div style="font-size:48px;margin-bottom:12px;">🌐</div>
+                <div>ПОКА НЕТ ПОСТОВ</div>
+                <div style="font-size:0.85rem;color:#5a5d66;">БУДЬТЕ ПЕРВЫМ</div>
+            </div>
+        `;
+    }
+
+    const myPosts = sorted.filter(p => p.authorId === profileId);
+    if (myPosts.length) {
+        postsListProfileEl.innerHTML = myPosts.map(p => renderPostCard(p)).join('');
+    } else {
+        postsListProfileEl.innerHTML = '<div class="empty-posts">У ВАС НЕТ ПОСТОВ</div>';
+    }
+}
+
+function renderPostCard(post) {
+    const isMine = post.authorId === profileId;
+    const deleteBtn = isMine ? `
+        <button class="delete-post-btn" data-delete="${post.id}" type="button">✕</button>
+    ` : '';
+
+    let mediaHTML = '';
+    if (post.media && post.media.length) {
+        mediaHTML = `<div class="post-media">${post.media.map(m => {
+            if (m.type === 'video') {
+                return `<video controls src="${m.data}"></video>`;
+            } else {
+                return `<img src="${m.data}" loading="lazy">`;
+            }
+        }).join('')}</div>`;
+    }
+
+    const comments = post.comments || [];
+    const commentsHTML = comments.map(c => {
+        return `
+            <div class="comment">
+                <img class="comment-avatar" src="${DEFAULT_AVATAR}">
+                <div class="comment-content">
+                    <span class="comment-nick">АНОНИМ</span>
+                    <div class="comment-text">${escapeHtml(c.text)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    const isOpen = openComments.has(post.id);
+    const myVote = post.votes?.[profileId] || 0;
+    const postTime = post.createdAt?.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
+
+    return `
+        <div class="post-card" data-id="${post.id}">
+            <div class="post-header">
+                <img class="post-avatar" src="${post.authorAvatar || DEFAULT_AVATAR}">
+                <span class="post-nick">${escapeHtml(post.authorName || 'АНОНИМ')}</span>
+                <span class="post-time">${formatDate(postTime)}</span>
+                ${deleteBtn}
+            </div>
+            ${post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : ''}
+            ${mediaHTML}
+            <div class="post-footer">
+                <button class="vote-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">
+                    ❤️ ${post.likes || 0}
+                </button>
+                <button class="vote-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">
+                    👎 ${post.dislikes || 0}
+                </button>
+                <button class="comment-btn" data-toggle="${post.id}" type="button">
+                    💬 ${comments.length}
+                </button>
+            </div>
+            <div class="comments-section" id="comments-${post.id}" style="display:${isOpen ? 'block' : 'none'}">
+                ${commentsHTML}
+                <div class="comment-input-row">
+                    <input class="comment-input" id="comment-input-${post.id}" maxlength="1000" placeholder="КОММЕНТАРИЙ...">
+                    <button class="btn add-comment-btn" data-comment="${post.id}" type="button">▶</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function updateNotifCount() {
+    const count = 0;
+    notifCountEl.textContent = count;
+    notifCountEl.classList.toggle('visible', count > 0);
+}
+
+function renderNotifications() {
+    notificationPanelEl.innerHTML = '<div class="notif-item">НЕТ УВЕДОМЛЕНИЙ</div>';
+}
+
+// ============================================================
+// ВСПОМОГАТЕЛЬНЫЕ
+// ============================================================
+
+function escapeHtml(v) {
+    const d = document.createElement('div');
+    d.textContent = v == null ? '' : String(v);
+    return d.innerHTML;
+}
+
+function formatDate(date) {
+    if (!date) return '';
+    try {
+        return new Intl.DateTimeFormat('ru-RU', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        }).format(date);
+    } catch { return ''; }
+}
+
+function showToast(msg, err = false) {
+    const old = document.querySelector('.toast');
+    if (old) old.remove();
+    const t = document.createElement('div');
+    t.className = `toast${err ? ' error' : ''}`;
+    t.textContent = msg;
+    document.body.append(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+// ============================================================
+// СОБЫТИЯ
+// ============================================================
+
+// Никнейм
+nicknameInput.addEventListener('input', function() {
+    const nick = this.value.trim();
+    profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
+    clearTimeout(saveTimer);
+    if (!nick) {
+        this.classList.remove('error');
+        nickErrorMsg.classList.remove('visible');
+        return;
+    }
+    saveTimer = setTimeout(() => saveProfile(nick), 500);
+});
+
+nicknameInput.addEventListener('blur', function() {
+    clearTimeout(saveTimer);
+    const nick = this.value.trim();
+    if (nick) saveProfile(nick);
+});
+
+// Аватар
+profileAvatarEl.addEventListener('click', () => avatarUploadEl.click());
+
+avatarUploadEl.addEventListener('change', function() {
+    const file = this.files[0];
+    this.value = '';
+    if (!file) return;
+    if (!currentProfile?.nickname) {
+        showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
+        return;
+    }
+    if (file.size > MAX_AVATAR_SIZE) {
+        showToast('АВАТАР МАКСИМУМ 5 МБ', true);
+        return;
+    }
+    if (!file.type.startsWith('image/')) {
+        showToast('ТОЛЬКО ИЗОБРАЖЕНИЯ', true);
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        saveProfile(currentProfile.nickname, e.target.result);
+        showToast('АВАТАР ОБНОВЛЁН');
+    };
+    reader.readAsDataURL(file);
+});
+
+// Медиа
+document.getElementById('attachBtn').addEventListener('click', () => mediaUploadEl.click());
+
+mediaUploadEl.addEventListener('change', function() {
+    const files = Array.from(this.files);
+    this.value = '';
+    let total = pendingMedia.reduce((s, i) => s + i.file.size, 0);
+    for (const file of files) {
+        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+            showToast('НЕПОДДЕРЖИВАЕМЫЙ ФАЙЛ', true);
+            continue;
+        }
+        if (file.size > MAX_FILE_SIZE || total + file.size > MAX_FILE_SIZE) {
+            showToast('МАКСИМУМ 10 МБ', true);
+            break;
+        }
+        total += file.size;
+        pendingMedia.push({ file, url: URL.createObjectURL(file) });
+    }
+    renderMediaPreview();
+    updateUploadStatus();
+});
+
+function renderMediaPreview() {
+    if (pendingMedia.length) {
+        mediaPreviewEl.innerHTML = pendingMedia.map((item, i) => `
+            <div class="preview-item">
+                ${item.file.type.startsWith('video/')
+                    ? `<video src="${item.url}" muted></video>`
+                    : `<img src="${item.url}">`}
+                <div class="preview-size">${escapeHtml(item.file.name)}</div>
+                <button class="remove-media" data-remove="${i}" type="button">✕</button>
+            </div>
+        `).join('');
+    } else {
+        mediaPreviewEl.innerHTML = '';
+    }
+}
+
+function updateUploadStatus(text) {
+    if (text) {
+        uploadStatusEl.textContent = text;
+        return;
+    }
+    const total = pendingMedia.reduce((s, i) => s + i.file.size, 0);
+    uploadStatusEl.textContent = pendingMedia.length
+        ? `${pendingMedia.length} ФАЙЛОВ (${(total / 1048576).toFixed(1)} МБ)`
+        : '';
+}
+
+mediaPreviewEl.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-remove]');
+    if (!btn) return;
+    const idx = Number(btn.dataset.remove);
+    const removed = pendingMedia.splice(idx, 1)[0];
+    if (removed) URL.revokeObjectURL(removed.url);
+    renderMediaPreview();
+    updateUploadStatus();
+});
+
+// Публикация
+publishBtnEl.addEventListener('click', async function() {
+    if (!currentProfile?.nickname) {
+        showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
+        return;
+    }
+    const text = postTextEl.value.trim();
+    if (!text && pendingMedia.length === 0) {
+        showToast('НАПИШИТЕ ТЕКСТ ИЛИ ПРИКРЕПИТЕ ФАЙЛ', true);
+        return;
+    }
+    this.disabled = true;
+    this.textContent = '...';
+    try {
+        const media = [];
+        for (const item of pendingMedia) {
+            const data = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(item.file);
+            });
+            media.push({
+                type: item.file.type.startsWith('video/') ? 'video' : 'image',
+                data: data
+            });
+        }
+        await createPost(text, media);
+        postTextEl.value = '';
+        pendingMedia.forEach((item) => URL.revokeObjectURL(item.url));
+        pendingMedia = [];
+        renderMediaPreview();
+        updateUploadStatus();
+        setActiveTab('tabFeed', 'feedSection');
+    } catch (e) {
+        showToast(e.message, true);
+    } finally {
+        this.disabled = false;
+        this.textContent = 'ОПУБЛИКОВАТЬ';
     }
 });
 
-document.addEventListener('click', () => {
-    notificationPanel.style.display = 'none';
+// ============================================================
+// КЛИКИ
+// ============================================================
+
+document.addEventListener('click', function(e) {
+    const voteBtn = e.target.closest('[data-vote]');
+    if (voteBtn) {
+        if (!currentProfile?.nickname) {
+            showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
+            return;
+        }
+        votePost(voteBtn.dataset.id, Number(voteBtn.dataset.vote));
+        return;
+    }
+    const toggleBtn = e.target.closest('[data-toggle]');
+    if (toggleBtn) {
+        const id = toggleBtn.dataset.toggle;
+        const section = document.getElementById(`comments-${id}`);
+        if (!section) return;
+        const open = section.style.display !== 'block';
+        section.style.display = open ? 'block' : 'none';
+        open ? openComments.add(id) : openComments.delete(id);
+        return;
+    }
+    const commentBtn = e.target.closest('[data-comment]');
+    if (commentBtn) {
+        if (!currentProfile?.nickname) {
+            showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
+            return;
+        }
+        const id = commentBtn.dataset.comment;
+        const input = document.getElementById(`comment-input-${id}`);
+        const text = input?.value.trim();
+        if (!text) return;
+        addComment(id, text);
+        openComments.add(id);
+        input.value = '';
+        return;
+    }
+    const delBtn = e.target.closest('[data-delete]');
+    if (delBtn) {
+        if (!confirm('УДАЛИТЬ ПОСТ?')) return;
+        deletePost(delBtn.dataset.delete);
+        return;
+    }
 });
 
-// ============ INITIALIZATION ============
-async function init() {
-    loadUserFromLocal();
-    
-    // Load posts
-    loadPosts(postsListFeed, false);
-    loadPosts(postsListProfile, true);
-    
-    // Load notifications
-    loadNotificationsFromLocal();
-    
-    // Auto-save nickname on blur
-    nicknameInput.addEventListener('blur', () => {
-        const nickname = nicknameInput.value.trim();
-        if (nickname && nickname !== currentUser.nickname) {
-            saveNickname();
-        }
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter' || e.shiftKey || !e.target.classList.contains('comment-input')) return;
+    e.preventDefault();
+    const btn = e.target.closest('.comment-input-row')?.querySelector('[data-comment]');
+    if (btn) btn.click();
+});
+
+bellBtnEl.addEventListener('click', function() {
+    notifOpen = !notifOpen;
+    notificationPanelEl.style.display = notifOpen ? 'block' : 'none';
+    if (notifOpen) {
+        renderNotifications();
+    }
+});
+
+document.addEventListener('click', function(e) {
+    if (!notifOpen) return;
+    if (bellBtnEl.contains(e.target) || notificationPanelEl.contains(e.target)) return;
+    notifOpen = false;
+    notificationPanelEl.style.display = 'none';
+});
+
+function setActiveTab(buttonId, sectionId) {
+    document.querySelectorAll('.tabs button').forEach(btn => {
+        btn.classList.toggle('active', btn.id === buttonId);
     });
-    
-    // Keyboard shortcut for publish
-    postText.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.key === 'Enter') {
-            publishPost();
-        }
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.toggle('active', section.id === sectionId);
     });
-    
-    console.log('DARK FORT initialized');
-    console.log('Your UID:', currentUser.uid);
 }
 
-// Start the app
+document.getElementById('tabFeed').addEventListener('click', () => setActiveTab('tabFeed', 'feedSection'));
+document.getElementById('tabCreate').addEventListener('click', () => setActiveTab('tabCreate', 'createSection'));
+document.getElementById('tabProfile').addEventListener('click', () => setActiveTab('tabProfile', 'profileSection'));
+
+// ============================================================
+// ЗАПУСК
+// ============================================================
+
+async function init() {
+    try {
+        console.log('🔥 DARK FORT INIT...');
+        console.log('👤 ID:', profileId);
+        console.log('📦 PROJECT:', firebaseConfig.projectId);
+
+        await getOrCreateProfile();
+        subscribeToPosts();
+
+        if (!currentProfile?.nickname) {
+            nicknameInput.focus();
+        }
+
+        console.log('✅ DARK FORT ONLINE');
+    } catch (error) {
+        console.error('❌ Ошибка инициализации:', error);
+        showToast('ОШИБКА ПОДКЛЮЧЕНИЯ К FIREBASE', true);
+        
+        // Пробуем кэш
+        const cached = getCachedProfile();
+        if (cached) {
+            currentProfile = cached;
+            updateProfileUI();
+            postsListFeedEl.innerHTML = `
+                <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
+                    <div style="font-size:48px;margin-bottom:12px;">📡</div>
+                    <div>ОФФЛАЙН РЕЖИМ</div>
+                    <div style="font-size:0.85rem;color:#5a5d66;">ДАННЫЕ ИЗ КЭША</div>
+                    <button onclick="subscribeToPosts()" style="margin-top:12px;padding:6px 16px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+                </div>
+            `;
+        }
+    }
+}
+
 init();

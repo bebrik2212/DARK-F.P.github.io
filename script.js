@@ -1,3 +1,11 @@
+// ============================================================
+// DARK FORT - FIREBASE (ПОЛНАЯ ВЕРСИЯ)
+// ============================================================
+
+// ============================================================
+// 🔥 КОНФИГ FIREBASE (ТВОЙ)
+// ============================================================
+
 const firebaseConfig = {
     apiKey: "AIzaSyBa9NWi5FpmAx6ExJh1fJ3b1ipUEEBRxU",
     authDomain: "dark-fortport.firebaseapp.com",
@@ -8,22 +16,21 @@ const firebaseConfig = {
 };
 
 // ============================================================
+// 👑 АДМИНИСТРАТОРЫ
+// ============================================================
+
+const ADMIN_NICKNAMES = ['amamammellstroy67'];
+
+// ============================================================
 // ИНИЦИАЛИЗАЦИЯ FIREBASE
 // ============================================================
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Включаем оффлайн-режим
 db.enablePersistence()
-    .then(() => console.log('🔥 Offline persistence enabled'))
-    .catch((err) => {
-        if (err.code == 'failed-precondition') {
-            console.warn('Оффлайн-режим: несколько вкладок открыто');
-        } else if (err.code == 'unimplemented') {
-            console.warn('Браузер не поддерживает оффлайн-режим');
-        }
-    });
+    .then(() => console.log('🔥 Offline enabled'))
+    .catch(() => console.warn('Offline not available'));
 
 // ============================================================
 // КОНСТАНТЫ
@@ -40,7 +47,7 @@ if (!profileId) {
     localStorage.setItem('df_profile_id', profileId);
 }
 
-// --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
+// --- ГЛОБАЛЬНЫЕ ---
 let currentProfile = null;
 let allPosts = [];
 let pendingMedia = [];
@@ -49,7 +56,7 @@ let notifOpen = false;
 const openComments = new Set();
 let unsubscribePosts = null;
 
-// --- DOM ЭЛЕМЕНТЫ ---
+// --- DOM ---
 const nicknameInput = document.getElementById('nicknameInput');
 const profileAvatarEl = document.getElementById('profileAvatar');
 const profileBigAvatarEl = document.getElementById('profileBigAvatar');
@@ -71,17 +78,17 @@ const postsListProfileEl = document.getElementById('postsListProfile');
 // КЭШ
 // ============================================================
 
-function getCachedProfile() {
+function getCachedData() {
     try {
-        const raw = localStorage.getItem('df_profile_cache');
+        const raw = localStorage.getItem('df_cache');
         if (raw) return JSON.parse(raw);
     } catch (e) {}
     return null;
 }
 
-function setCachedProfile(profile) {
+function setCachedData(data) {
     try {
-        localStorage.setItem('df_profile_cache', JSON.stringify(profile));
+        localStorage.setItem('df_cache', JSON.stringify(data));
     } catch (e) {}
 }
 
@@ -90,27 +97,24 @@ function setCachedProfile(profile) {
 // ============================================================
 
 async function getOrCreateProfile() {
-    // Сначала пробуем кэш
-    const cached = getCachedProfile();
-    if (cached) {
-        currentProfile = cached;
-        updateProfileUI();
-    }
-
     try {
         const doc = await db.collection('profiles').doc(profileId).get();
         if (doc.exists) {
             currentProfile = { id: profileId, ...doc.data() };
-            setCachedProfile(currentProfile);
+            setCachedData({ profile: currentProfile });
             updateProfileUI();
             return currentProfile;
         }
     } catch (error) {
         console.warn('Ошибка получения профиля:', error);
-        if (currentProfile) return currentProfile;
+        const cached = getCachedData();
+        if (cached?.profile) {
+            currentProfile = cached.profile;
+            updateProfileUI();
+            return currentProfile;
+        }
     }
 
-    // Создаём новый профиль
     const newProfile = {
         nickname: '',
         avatarData: DEFAULT_AVATAR,
@@ -124,7 +128,7 @@ async function getOrCreateProfile() {
     }
 
     currentProfile = { id: profileId, ...newProfile };
-    setCachedProfile(currentProfile);
+    setCachedData({ profile: currentProfile });
     updateProfileUI();
     return currentProfile;
 }
@@ -133,7 +137,6 @@ async function saveProfile(nickname, avatarData) {
     if (!currentProfile) await getOrCreateProfile();
     if (!currentProfile) return false;
 
-    // Проверка занятости
     if (nickname && nickname !== currentProfile.nickname) {
         try {
             const snapshot = await db.collection('profiles')
@@ -154,20 +157,17 @@ async function saveProfile(nickname, avatarData) {
     if (avatarData !== undefined) updateData.avatarData = avatarData;
     updateData.updatedAt = new Date().toISOString();
 
-    // Обновляем локально
     Object.assign(currentProfile, updateData);
-    setCachedProfile(currentProfile);
+    setCachedData({ profile: currentProfile });
     nicknameInput.classList.remove('error');
     nickErrorMsg.classList.remove('visible');
     updateProfileUI();
 
-    // Обновляем в Firebase
     try {
         await db.collection('profiles').doc(profileId).update(updateData);
         return true;
     } catch (error) {
         console.warn('Ошибка сохранения профиля:', error);
-        showToast('ПРОФИЛЬ СОХРАНЁН ЛОКАЛЬНО', true);
         return true;
     }
 }
@@ -182,7 +182,6 @@ function subscribeToPosts() {
         unsubscribePosts = null;
     }
 
-    // Показываем загрузку
     postsListFeedEl.innerHTML = '<div class="empty-posts">⏳ ЗАГРУЗКА...</div>';
 
     unsubscribePosts = db.collection('posts')
@@ -194,30 +193,22 @@ function subscribeToPosts() {
 
             for (const doc of snapshot.docs) {
                 const data = doc.data();
-                const postId = doc.id;
-
                 let authorName = 'АНОНИМ';
                 let authorAvatar = DEFAULT_AVATAR;
 
                 if (data.authorId) {
-                    if (profilesCache[data.authorId]) {
-                        authorName = profilesCache[data.authorId].nickname || 'АНОНИМ';
-                        authorAvatar = profilesCache[data.authorId].avatarData || DEFAULT_AVATAR;
-                    } else {
-                        try {
-                            const authorDoc = await db.collection('profiles').doc(data.authorId).get();
-                            if (authorDoc.exists) {
-                                const authorData = authorDoc.data();
-                                profilesCache[data.authorId] = authorData;
-                                authorName = authorData.nickname || 'АНОНИМ';
-                                authorAvatar = authorData.avatarData || DEFAULT_AVATAR;
-                            }
-                        } catch (e) {}
-                    }
+                    try {
+                        const authorDoc = await db.collection('profiles').doc(data.authorId).get();
+                        if (authorDoc.exists) {
+                            const authorData = authorDoc.data();
+                            authorName = authorData.nickname || 'АНОНИМ';
+                            authorAvatar = authorData.avatarData || DEFAULT_AVATAR;
+                        }
+                    } catch (e) {}
                 }
 
                 posts.push({
-                    id: postId,
+                    id: doc.id,
                     ...data,
                     authorName: authorName,
                     authorAvatar: authorAvatar
@@ -228,13 +219,13 @@ function subscribeToPosts() {
             renderAllPosts();
             updateNotifCount();
         }, (error) => {
-            console.warn('Ошибка подписки на посты:', error);
+            console.error('Ошибка подписки:', error);
             postsListFeedEl.innerHTML = `
                 <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
                     <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
                     <div>ОШИБКА ПОДКЛЮЧЕНИЯ</div>
-                    <div style="font-size:0.85rem;color:#5a5d66;">ПРОВЕРЬТЕ ИНТЕРНЕТ</div>
-                    <button onclick="subscribeToPosts()" style="margin-top:12px;padding:6px 16px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+                    <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
+                    <button onclick="subscribeToPosts()" style="margin-top:12px;padding:8px 20px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
                 </div>
             `;
         });
@@ -257,29 +248,41 @@ async function createPost(text, media) {
             comments: [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        showToast('ПОСТ ОПУБЛИКОВАН');
+        showToast('✅ ПОСТ ОПУБЛИКОВАН');
         return true;
     } catch (error) {
-        console.warn('Ошибка создания поста:', error);
+        console.error('Ошибка публикации:', error);
         showToast('ОШИБКА ПУБЛИКАЦИИ', true);
         return false;
     }
 }
 
+// ============================================================
+// 🔥 УДАЛЕНИЕ ПОСТА (АДМИН МОЖЕТ ВСЁ)
+// ============================================================
+
 async function deletePost(postId) {
     try {
         const doc = await db.collection('posts').doc(postId).get();
-        if (!doc.exists) return false;
+        if (!doc.exists) {
+            showToast('ПОСТ НЕ НАЙДЕН', true);
+            return false;
+        }
+
         const data = doc.data();
-        if (data.authorId !== profileId) {
+        const isAdmin = ADMIN_NICKNAMES.includes(currentProfile?.nickname);
+        const isOwner = data.authorId === profileId;
+
+        if (!isAdmin && !isOwner) {
             showToast('НЕ ВАШ ПОСТ', true);
             return false;
         }
+
         await db.collection('posts').doc(postId).delete();
-        showToast('ПОСТ УДАЛЁН');
+        showToast(isAdmin ? '🗑️ ПОСТ УДАЛЁН (АДМИН)' : 'ПОСТ УДАЛЁН');
         return true;
     } catch (error) {
-        console.warn('Ошибка удаления поста:', error);
+        console.error('Ошибка удаления:', error);
         showToast('ОШИБКА УДАЛЕНИЯ', true);
         return false;
     }
@@ -317,8 +320,7 @@ async function votePost(postId, value) {
         await docRef.update({ likes, dislikes, votes });
         return true;
     } catch (error) {
-        console.warn('Ошибка голосования:', error);
-        showToast('ОШИБКА ГОЛОСОВАНИЯ', true);
+        console.error('Ошибка голосования:', error);
         return false;
     }
 }
@@ -346,8 +348,7 @@ async function addComment(postId, text) {
         await docRef.update({ comments });
         return true;
     } catch (error) {
-        console.warn('Ошибка добавления комментария:', error);
-        showToast('ОШИБКА КОММЕНТАРИЯ', true);
+        console.error('Ошибка комментария:', error);
         return false;
     }
 }
@@ -367,7 +368,6 @@ function updateProfileUI() {
         nicknameInput.value = nick;
     }
     profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
-
     const avatar = currentProfile.avatarData || DEFAULT_AVATAR;
     profileAvatarEl.src = avatar;
     profileBigAvatarEl.src = avatar;
@@ -402,7 +402,10 @@ function renderAllPosts() {
 
 function renderPostCard(post) {
     const isMine = post.authorId === profileId;
-    const deleteBtn = isMine ? `
+    const isAdmin = ADMIN_NICKNAMES.includes(currentProfile?.nickname);
+    const canDelete = isMine || isAdmin;
+    
+    const deleteBtn = canDelete ? `
         <button class="delete-post-btn" data-delete="${post.id}" type="button">✕</button>
     ` : '';
 
@@ -510,7 +513,6 @@ function showToast(msg, err = false) {
 // СОБЫТИЯ
 // ============================================================
 
-// Никнейм
 nicknameInput.addEventListener('input', function() {
     const nick = this.value.trim();
     profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
@@ -529,7 +531,6 @@ nicknameInput.addEventListener('blur', function() {
     if (nick) saveProfile(nick);
 });
 
-// Аватар
 profileAvatarEl.addEventListener('click', () => avatarUploadEl.click());
 
 avatarUploadEl.addEventListener('change', function() {
@@ -556,7 +557,7 @@ avatarUploadEl.addEventListener('change', function() {
     reader.readAsDataURL(file);
 });
 
-// Медиа
+// КНОПКА ПРИКРЕПЛЕНИЯ
 document.getElementById('attachBtn').addEventListener('click', () => mediaUploadEl.click());
 
 mediaUploadEl.addEventListener('change', function() {
@@ -616,7 +617,6 @@ mediaPreviewEl.addEventListener('click', function(e) {
     updateUploadStatus();
 });
 
-// Публикация
 publishBtnEl.addEventListener('click', async function() {
     if (!currentProfile?.nickname) {
         showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
@@ -745,9 +745,11 @@ document.getElementById('tabProfile').addEventListener('click', () => setActiveT
 
 async function init() {
     try {
-        console.log('🔥 DARK FORT INIT...');
-        console.log('👤 ID:', profileId);
+        console.log('🔥 DARK FORT INIT');
         console.log('📦 PROJECT:', firebaseConfig.projectId);
+
+        await db.collection('_test').doc('test').set({ test: true });
+        console.log('✅ Firebase подключен');
 
         await getOrCreateProfile();
         subscribeToPosts();
@@ -758,23 +760,23 @@ async function init() {
 
         console.log('✅ DARK FORT ONLINE');
     } catch (error) {
-        console.error('❌ Ошибка инициализации:', error);
+        console.error('❌ Ошибка:', error);
         showToast('ОШИБКА ПОДКЛЮЧЕНИЯ К FIREBASE', true);
         
-        // Пробуем кэш
-        const cached = getCachedProfile();
-        if (cached) {
-            currentProfile = cached;
+        const cached = getCachedData();
+        if (cached?.profile) {
+            currentProfile = cached.profile;
             updateProfileUI();
-            postsListFeedEl.innerHTML = `
-                <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
-                    <div style="font-size:48px;margin-bottom:12px;">📡</div>
-                    <div>ОФФЛАЙН РЕЖИМ</div>
-                    <div style="font-size:0.85rem;color:#5a5d66;">ДАННЫЕ ИЗ КЭША</div>
-                    <button onclick="subscribeToPosts()" style="margin-top:12px;padding:6px 16px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
-                </div>
-            `;
         }
+        
+        postsListFeedEl.innerHTML = `
+            <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
+                <div style="font-size:48px;margin-bottom:12px;">📡</div>
+                <div>ОФФЛАЙН РЕЖИМ</div>
+                <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
+                <button onclick="subscribeToPosts()" style="margin-top:12px;padding:8px 20px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+            </div>
+        `;
     }
 }
 

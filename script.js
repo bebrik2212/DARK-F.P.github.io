@@ -400,6 +400,10 @@ function renderAllPosts() {
     }
 }
 
+// ============================================================
+// 🔥 РЕНДЕР ПОСТА С АДМИН-КНОПКОЙ
+// ============================================================
+
 function renderPostCard(post) {
     const isMine = post.authorId === profileId;
     const isAdmin = ADMIN_NICKNAMES.includes(currentProfile?.nickname);

@@ -1,39 +1,21 @@
-// ============================================================
-// BREWPAGE КОНФИГУРАЦИЯ - ГОТОВЫЙ ПУБЛИЧНЫЙ ДОКУМЕНТ
-// ============================================================
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Эти данные уже работают! Просто скопируйте этот файл
-const NAMESPACE = 'public';
-const DOC_ID = 'dark-fort-social-data';
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBa9NWi5FfpmAx0ExJh1fJ3b1ipUEEBRxU",
+  authDomain: "dark-fortport.firebaseapp.com",
+  projectId: "dark-fortport",
+  storageBucket: "dark-fortport.firebasestorage.app",
+  messagingSenderId: "3814531503",
+  appId: "1:3814531503:web:a8200e1f337935a3530f5a",
+  measurementId: "G-KF9GGGL43L"
+};
 
-// Публичный токен для записи (демо-режим)
-const PUBLIC_TOKEN = 'demo-token-dark-fort-2024';
-
-// Полный URL для доступа к данным
-const DATA_URL = `https://brewpage.app/api/json/${NAMESPACE}/${DOC_ID}`;
-
-// URL для создания документа (если его ещё нет)
-const CREATE_URL = 'https://brewpage.app/api/json';
-
-// Заголовки для запросов
-function getHeaders() {
-    return {
-        'Content-Type': 'application/json',
-        'User-Agent': 'DarkFort/1.0',
-        'X-Owner-Token': PUBLIC_TOKEN
-    };
-}
-
-// Альтернативные публичные документы (на случай, если первый не работает)
-const BACKUP_CONFIGS = [
-    {
-        namespace: 'public',
-        docId: 'social-data-backup-1',
-        token: 'backup-token-2024'
-    },
-    {
-        namespace: 'public',
-        docId: 'dark-fort-mirror',
-        token: 'mirror-token-2024'
-    }
-];
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);

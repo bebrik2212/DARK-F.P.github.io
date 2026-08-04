@@ -1,308 +1,272 @@
 // ============================================================
-// АНОНИМНАЯ СОЦИАЛЬНАЯ СЕТЬ - ТОЛЬКО LOCALSTORAGE
-// НИКАКИХ FETCH ЗАПРОСОВ! РАБОТАЕТ МГНОВЕННО!
+// DARK FORT - PORT
+// ANONYMOUS SOCIAL NETWORK
 // ============================================================
 
 const DEFAULT_AVATAR = 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg';
 const MAX_FILE_SIZE = 67 * 1024 * 1024;
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
-// --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
-let profileId = localStorage.getItem('anon_profile_id');
+// --- ID ---
+let profileId = localStorage.getItem('df_profile_id');
 if (!profileId) {
-    profileId = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    localStorage.setItem('anon_profile_id', profileId);
+    profileId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    localStorage.setItem('df_profile_id', profileId);
 }
 
 let currentProfile = null;
 let allPosts = [];
 let pendingMedia = [];
-let profileSaveTimer = 0;
-let notificationPanelOpen = false;
+let saveTimer = 0;
+let notifOpen = false;
 const openComments = new Set();
 
-// --- DOM ЭЛЕМЕНТЫ ---
-const nicknameInput = document.getElementById('nicknameInput');
-const profileAvatarEl = document.getElementById('profileAvatar');
-const profileBigAvatarEl = document.getElementById('profileBigAvatar');
-const profileNicknameEl = document.getElementById('profileNickname');
-const avatarUploadEl = document.getElementById('avatarUpload');
-const bellBtnEl = document.getElementById('bellBtn');
-const notifCountEl = document.getElementById('notifCount');
-const notificationPanelEl = document.getElementById('notificationPanel');
-const nickErrorMsg = document.getElementById('nickErrorMsg');
-const postTextEl = document.getElementById('postText');
-const mediaUploadEl = document.getElementById('mediaUpload');
-const mediaPreviewEl = document.getElementById('mediaPreview');
-const publishBtnEl = document.getElementById('publishBtn');
-const uploadStatusEl = document.getElementById('uploadStatus');
-const postsListFeedEl = document.getElementById('postsListFeed');
-const postsListProfileEl = document.getElementById('postsListProfile');
+// --- DOM ---
+const nickInput = document.getElementById('nickInput');
+const profileAvatar = document.getElementById('profileAvatar');
+const profileBigAvatar = document.getElementById('profileBigAvatar');
+const profileNick = document.getElementById('profileNick');
+const avatarUpload = document.getElementById('avatarUpload');
+const notifBtn = document.getElementById('notifBtn');
+const notifBadge = document.getElementById('notifBadge');
+const notifPanel = document.getElementById('notifPanel');
+const nickError = document.getElementById('nickError');
+const postText = document.getElementById('postText');
+const mediaUpload = document.getElementById('mediaUpload');
+const mediaPreview = document.getElementById('mediaPreview');
+const publishBtn = document.getElementById('publishBtn');
+const uploadInfo = document.getElementById('uploadInfo');
+const postsFeed = document.getElementById('postsFeed');
+const postsProfile = document.getElementById('postsProfile');
 
-// --- РАБОТА С ДАННЫМИ ---
+// --- DATA ---
 
 function getData() {
     try {
-        const raw = localStorage.getItem('anon_social_data');
+        const raw = localStorage.getItem('df_data');
         if (raw) {
             const data = JSON.parse(raw);
             if (!data.posts) data.posts = [];
             if (!data.profiles) data.profiles = {};
-            if (!data.notifications) data.notifications = [];
+            if (!data.notifs) data.notifs = [];
             return data;
         }
-    } catch (e) {
-        console.warn('Ошибка чтения данных:', e);
-    }
-    return { posts: [], profiles: {}, notifications: [] };
+    } catch (e) {}
+    return { posts: [], profiles: {}, notifs: [] };
 }
 
 function saveData(data) {
     try {
-        localStorage.setItem('anon_social_data', JSON.stringify(data));
-        // Уведомляем другие вкладки
+        localStorage.setItem('df_data', JSON.stringify(data));
         try {
-            const channel = new BroadcastChannel('social_channel');
-            channel.postMessage({ type: 'update' });
-            channel.close();
+            const ch = new BroadcastChannel('df_channel');
+            ch.postMessage({ type: 'update' });
+            ch.close();
         } catch (e) {}
-    } catch (e) {
-        console.warn('Ошибка сохранения:', e);
-    }
+    } catch (e) {}
 }
 
-// --- ЗАГРУЗКА ДАННЫХ ---
+// --- LOAD ---
 
 function loadData() {
     const data = getData();
     
-    // Загружаем профиль
     if (data.profiles[profileId]) {
         currentProfile = data.profiles[profileId];
     } else {
         data.profiles[profileId] = {
             nickname: '',
             avatarData: DEFAULT_AVATAR,
-            createdAt: new Date().toISOString()
+            created: new Date().toISOString()
         };
         saveData(data);
         currentProfile = data.profiles[profileId];
     }
     
-    // Загружаем посты с данными авторов
-    allPosts = data.posts.map(post => {
-        const authorProfile = data.profiles[post.authorId];
+    allPosts = data.posts.map(p => {
+        const author = data.profiles[p.authorId];
         return {
-            ...post,
-            author: authorProfile?.nickname || 'Аноним',
-            avatarData: authorProfile?.avatarData || DEFAULT_AVATAR,
+            ...p,
+            authorName: author?.nickname || 'ANON',
+            authorAvatar: author?.avatarData || DEFAULT_AVATAR,
         };
     });
     
     updateUI();
 }
 
-// --- ОБНОВЛЕНИЕ UI ---
+// --- UI ---
 
 function updateUI() {
     updateProfileUI();
-    renderAllPosts();
-    updateNotifCount();
+    renderPosts();
+    updateNotifBadge();
 }
 
 function updateProfileUI() {
     if (!currentProfile) return;
     
-    const nickname = document.activeElement === nicknameInput
-        ? nicknameInput.value.trim()
+    const nick = document.activeElement === nickInput
+        ? nickInput.value.trim()
         : (currentProfile.nickname || '');
     
-    if (document.activeElement !== nicknameInput) {
-        nicknameInput.value = nickname;
+    if (document.activeElement !== nickInput) {
+        nickInput.value = nick;
     }
-    profileNicknameEl.textContent = nickname || 'Без имени';
     
-    const avatarData = currentProfile.avatarData || DEFAULT_AVATAR;
-    profileAvatarEl.src = avatarData;
-    profileBigAvatarEl.src = avatarData;
+    profileNick.textContent = nick || 'NICKNAME';
+    
+    const avatar = currentProfile.avatarData || DEFAULT_AVATAR;
+    profileAvatar.src = avatar;
+    profileBigAvatar.src = avatar;
 }
 
-function renderAllPosts() {
+function renderPosts() {
     const sorted = [...allPosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
-    // Лента
     if (sorted.length) {
-        postsListFeedEl.innerHTML = sorted.map(p => renderPostCard(p)).join('');
+        postsFeed.innerHTML = sorted.map(p => renderPost(p)).join('');
     } else {
-        postsListFeedEl.innerHTML = `
-            <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;">
-                <div style="font-size:48px;margin-bottom:12px;">🌐</div>
-                <div>Пока нет постов</div>
-                <div style="font-size:0.85rem;margin-top:8px;color:#5a5d66;">Будьте первым!</div>
-            </div>
-        `;
+        postsFeed.innerHTML = '<div class="empty">NO POSTS</div>';
     }
     
-    // Мои посты
     const myPosts = sorted.filter(p => p.authorId === profileId);
     if (myPosts.length) {
-        postsListProfileEl.innerHTML = myPosts.map(p => renderPostCard(p)).join('');
+        postsProfile.innerHTML = myPosts.map(p => renderPost(p)).join('');
     } else {
-        postsListProfileEl.innerHTML = '<div class="empty-posts" style="padding:40px 20px;text-align:center;color:#8d9098;">У вас пока нет постов</div>';
+        postsProfile.innerHTML = '<div class="empty">NO POSTS</div>';
     }
 }
 
-function renderPostCard(post) {
+function renderPost(post) {
     const isMine = post.authorId === profileId;
-    const deleteButton = isMine ? `
-        <button class="delete-post-btn" type="button" data-delete-post="${post.id}" title="Удалить" style="background:none;border:none;color:#73767e;cursor:pointer;padding:4px 8px;">
-            ✕
-        </button>` : '';
+    const deleteBtn = isMine ? `
+        <button class="post-delete" data-delete="${post.id}">X</button>
+    ` : '';
     
-    // Медиа
     let mediaHTML = '';
     if (post.media && post.media.length) {
         mediaHTML = `<div class="post-media">${post.media.map(m => {
             if (m.type === 'video') {
-                return `<video controls src="${m.data || ''}" style="width:100%;max-height:400px;background:#07080a;"></video>`;
+                return `<video controls src="${m.data}"></video>`;
             } else {
-                return `<img src="${m.data || ''}" alt="media" loading="lazy" style="width:100%;max-height:400px;object-fit:contain;background:#07080a;">`;
+                return `<img src="${m.data}" loading="lazy">`;
             }
         }).join('')}</div>`;
     }
     
-    // Комментарии
     const comments = post.comments || [];
     const data = getData();
     const commentsHTML = comments.map(c => {
-        const authorProfile = data.profiles[c.authorId];
+        const author = data.profiles[c.authorId];
         return `
-            <div class="comment" style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid #23252b;">
-                <img class="comment-avatar" src="${authorProfile?.avatarData || DEFAULT_AVATAR}" alt="avatar" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;">
-                <div style="min-width:0;">
-                    <span style="font-weight:600;color:#c8c9ce;font-size:0.8rem;">${escapeHtml(authorProfile?.nickname || 'Аноним')}</span>
-                    <div style="margin-top:2px;color:#d1d2d6;font-size:0.85rem;line-height:1.4;word-wrap:break-word;">${escapeHtml(c.text)}</div>
+            <div class="comment">
+                <img class="comment-avatar" src="${author?.avatarData || DEFAULT_AVATAR}">
+                <div class="comment-content">
+                    <div class="comment-author">${escapeHtml(author?.nickname || 'ANON')}</div>
+                    <div class="comment-text">${escapeHtml(c.text)}</div>
                 </div>
             </div>
         `;
     }).join('');
     
     const isOpen = openComments.has(post.id);
-    const viewerVote = post.votes?.[profileId] || 0;
+    const myVote = post.votes?.[profileId] || 0;
     
     return `
-        <article class="post-card" data-postid="${post.id}" style="border:1px solid #2a2c32;border-radius:9px;background:#131419;overflow:hidden;">
-            <div class="post-header" style="display:flex;align-items:center;gap:9px;padding:10px;">
-                <img class="post-avatar" src="${post.avatarData || DEFAULT_AVATAR}" alt="avatar" style="width:34px;height:34px;border-radius:50%;object-fit:cover;">
-                <span class="post-nick" style="font-weight:600;color:#e8e9ec;font-size:0.86rem;">${escapeHtml(post.author) || 'Аноним'}</span>
-                <time class="post-time" style="margin-left:auto;color:#777a83;font-size:0.66rem;">${formatDate(post.createdAt)}</time>
-                ${deleteButton}
+        <div class="post" data-id="${post.id}">
+            <div class="post-header">
+                <img class="post-avatar" src="${post.authorAvatar || DEFAULT_AVATAR}">
+                <span class="post-author">${escapeHtml(post.authorName || 'ANON')}</span>
+                <span class="post-time">${formatTime(post.createdAt)}</span>
+                ${deleteBtn}
             </div>
-            ${post.text ? `<div class="post-text" style="padding:2px 12px 12px;font-size:0.92rem;line-height:1.48;white-space:pre-wrap;word-wrap:break-word;">${escapeHtml(post.text)}</div>` : ''}
+            ${post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : ''}
             ${mediaHTML}
-            <div class="post-footer" style="display:flex;gap:6px;padding:8px 10px;border-top:1px solid #2a2c32;">
-                <button class="vote-btn ${viewerVote === 1 ? 'liked' : ''}" type="button" data-postid="${post.id}" data-vote="1" style="display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:none;border-radius:6px;background:transparent;color:#92959d;cursor:pointer;${viewerVote === 1 ? 'color:#67b7ff;' : ''}">
-                    👍 ${post.likes || 0}
-                </button>
-                <button class="vote-btn ${viewerVote === -1 ? 'disliked' : ''}" type="button" data-postid="${post.id}" data-vote="-1" style="display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:none;border-radius:6px;background:transparent;color:#92959d;cursor:pointer;${viewerVote === -1 ? 'color:#ff5353;' : ''}">
-                    👎 ${post.dislikes || 0}
-                </button>
-                <button class="comment-btn" type="button" data-toggle-comments="${post.id}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:none;border-radius:6px;background:transparent;color:#92959d;cursor:pointer;">
-                    💬 ${comments.length}
-                </button>
+            <div class="post-footer">
+                <button class="post-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">+ ${post.likes || 0}</button>
+                <button class="post-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">- ${post.dislikes || 0}</button>
+                <button class="post-btn" data-toggle="${post.id}">C ${comments.length}</button>
             </div>
-            <div class="comments-section" id="comments-${post.id}" style="display:${isOpen ? 'block' : 'none'};padding:0 10px 10px;border-top:1px solid #2a2c32;">
+            <div class="comments-section ${isOpen ? 'open' : ''}" id="comments-${post.id}">
                 ${commentsHTML}
-                <div class="comment-input-row" style="display:flex;gap:7px;padding-top:10px;">
-                    <input class="comment-input" id="comment-input-${post.id}" maxlength="1000" placeholder="Напишите комментарий..." style="flex:1;min-width:0;height:34px;padding:0 9px;border:1px solid #2a2c32;border-radius:6px;background:#0c0d10;color:#f3f3f4;outline:none;">
-                    <button class="btn add-comment-btn" type="button" data-add-comment="${post.id}" style="padding:4px 12px;border:1px solid #4b4e57;border-radius:6px;background:#eeeeef;color:#111216;font-weight:700;cursor:pointer;">▶</button>
+                <div class="comment-input-row">
+                    <input class="comment-input" id="comment-input-${post.id}" maxlength="1000" placeholder="TYPE COMMENT...">
+                    <button class="comment-send" data-comment="${post.id}">SEND</button>
                 </div>
             </div>
-        </article>
+        </div>
     `;
 }
 
-function updateNotifCount() {
+function updateNotifBadge() {
     const data = getData();
-    const count = data.notifications?.filter(n => !n.read).length || 0;
-    notifCountEl.textContent = String(count);
-    notifCountEl.style.display = count > 0 ? 'grid' : 'none';
+    const count = data.notifs?.filter(n => !n.read).length || 0;
+    notifBadge.textContent = count;
+    notifBadge.classList.toggle('visible', count > 0);
 }
 
-function renderNotifications() {
+function renderNotifs() {
     const data = getData();
-    const notifications = data.notifications || [];
-    if (notifications.length) {
-        notificationPanelEl.innerHTML = notifications.map(n => `
-            <div class="notif-item" style="padding:10px;border-bottom:1px solid #27292f;font-size:0.83rem;line-height:1.35;">
+    const notifs = data.notifs || [];
+    if (notifs.length) {
+        notifPanel.innerHTML = notifs.map(n => `
+            <div class="notif-item">
                 ${escapeHtml(n.message)}
-                <span style="display:block;margin-top:3px;color:#70737b;font-size:0.68rem;">${formatDate(n.createdAt)}</span>
+                <span class="notif-time">${formatTime(n.createdAt)}</span>
             </div>
         `).join('');
     } else {
-        notificationPanelEl.innerHTML = '<div class="notif-item" style="padding:10px;color:#8d9098;">Нет уведомлений</div>';
+        notifPanel.innerHTML = '<div class="notif-item">NO NOTIFICATIONS</div>';
     }
 }
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+// --- HELPERS ---
 
-function escapeHtml(value) {
-    const div = document.createElement('div');
-    div.textContent = value == null ? '' : String(value);
-    return div.innerHTML;
+function escapeHtml(v) {
+    const d = document.createElement('div');
+    d.textContent = v == null ? '' : String(v);
+    return d.innerHTML;
 }
 
-function formatDate(value) {
-    if (!value) return '';
+function formatTime(v) {
+    if (!v) return '';
     try {
-        return new Intl.DateTimeFormat('ru-RU', {
+        return new Intl.DateTimeFormat('ru', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
-        }).format(new Date(value));
+        }).format(new Date(v));
     } catch {
         return '';
     }
 }
 
-function showToast(message, isError = false) {
+function toast(msg, err = false) {
     const old = document.querySelector('.toast');
     if (old) old.remove();
-    
-    const toast = document.createElement('div');
-    toast.className = `toast${isError ? ' error' : ''}`;
-    toast.textContent = message;
-    toast.style.cssText = `
-        position:fixed;z-index:50;right:18px;bottom:18px;
-        max-width:360px;padding:11px 14px;
-        border:1px solid ${isError ? '#6c3030' : '#34363e'};
-        border-radius:8px;
-        background:#191b20;
-        color:${isError ? '#ffc6c6' : '#f3f3f4'};
-        font-size:0.82rem;
-        box-shadow:0 15px 45px rgba(0,0,0,0.45);
-    `;
-    document.body.append(toast);
-    setTimeout(() => toast.remove(), 3200);
+    const t = document.createElement('div');
+    t.className = `toast${err ? ' error' : ''}`;
+    t.textContent = msg;
+    document.body.append(t);
+    setTimeout(() => t.remove(), 3000);
 }
 
-function generateId() {
-    return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+function genId() {
+    return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
 }
 
-// --- СОХРАНЕНИЕ ПРОФИЛЯ ---
+// --- PROFILE ---
 
-function saveProfile(nickname, avatarData) {
+function saveProfile(nick, avatar) {
     const data = getData();
     
-    // Проверка на занятость ника
-    const taken = Object.keys(data.profiles).some(id => 
-        id !== profileId && data.profiles[id]?.nickname?.toLowerCase() === nickname.toLowerCase()
+    const taken = Object.keys(data.profiles).some(id =>
+        id !== profileId && data.profiles[id]?.nickname?.toLowerCase() === nick.toLowerCase()
     );
     
-    if (taken && nickname) {
-        nicknameInput.classList.add('error');
-        nickErrorMsg.textContent = '❌ Этот ник уже занят!';
-        nickErrorMsg.style.display = 'block';
+    if (taken && nick) {
+        nickInput.classList.add('error');
+        nickError.classList.add('visible');
         return false;
     }
     
@@ -310,35 +274,35 @@ function saveProfile(nickname, avatarData) {
         data.profiles[profileId] = {};
     }
     
-    if (nickname) data.profiles[profileId].nickname = nickname;
-    if (avatarData) data.profiles[profileId].avatarData = avatarData;
-    data.profiles[profileId].updatedAt = new Date().toISOString();
+    if (nick) data.profiles[profileId].nickname = nick;
+    if (avatar) data.profiles[profileId].avatarData = avatar;
+    data.profiles[profileId].updated = new Date().toISOString();
     
     saveData(data);
     currentProfile = data.profiles[profileId];
     
-    nicknameInput.classList.remove('error');
-    nickErrorMsg.style.display = 'none';
+    nickInput.classList.remove('error');
+    nickError.classList.remove('visible');
     
     updateUI();
     return true;
 }
 
-// --- ПОСТЫ ---
+// --- POSTS ---
 
-function createPost(text, mediaData) {
+function createPost(text, media) {
     const data = getData();
     
     if (!currentProfile?.nickname) {
-        showToast('Сначала установите ник!', true);
+        toast('SET NICKNAME FIRST', true);
         return false;
     }
     
     const post = {
-        id: generateId(),
+        id: genId(),
         authorId: profileId,
         text: text || '',
-        media: mediaData || [],
+        media: media || [],
         likes: 0,
         dislikes: 0,
         votes: {},
@@ -349,43 +313,43 @@ function createPost(text, mediaData) {
     data.posts.unshift(post);
     saveData(data);
     loadData();
-    showToast('✅ Пост опубликован!');
+    toast('POST PUBLISHED');
     return true;
 }
 
-function deletePost(postId) {
+function deletePost(id) {
     const data = getData();
-    const index = data.posts.findIndex(p => p.id === postId);
-    if (index === -1) return false;
-    if (data.posts[index].authorId !== profileId) {
-        showToast('Это не ваш пост', true);
+    const idx = data.posts.findIndex(p => p.id === id);
+    if (idx === -1) return false;
+    if (data.posts[idx].authorId !== profileId) {
+        toast('NOT YOUR POST', true);
         return false;
     }
-    data.posts.splice(index, 1);
+    data.posts.splice(idx, 1);
     saveData(data);
     loadData();
-    showToast('🗑️ Пост удалён');
+    toast('POST DELETED');
     return true;
 }
 
-function votePost(postId, value) {
+function votePost(id, val) {
     const data = getData();
-    const post = data.posts.find(p => p.id === postId);
+    const post = data.posts.find(p => p.id === id);
     if (!post) return false;
     
-    const currentVote = post.votes?.[profileId] || 0;
+    const cur = post.votes?.[profileId] || 0;
     
-    if (currentVote === value) {
+    if (cur === val) {
         delete post.votes[profileId];
-        if (value === 1) post.likes--;
+        if (val === 1) post.likes--;
         else post.dislikes--;
     } else {
-        if (currentVote === 1) post.likes--;
-        else if (currentVote === -1) post.dislikes--;
+        if (cur === 1) post.likes--;
+        else if (cur === -1) post.dislikes--;
         
         if (!post.votes) post.votes = {};
-        post.votes[profileId] = value;
-        if (value === 1) post.likes++;
+        post.votes[profileId] = val;
+        if (val === 1) post.likes++;
         else post.dislikes++;
     }
     
@@ -400,13 +364,13 @@ function addComment(postId, text) {
     if (!post) return false;
     
     if (!currentProfile?.nickname) {
-        showToast('Сначала установите ник!', true);
+        toast('SET NICKNAME FIRST', true);
         return false;
     }
     
     if (!post.comments) post.comments = [];
     post.comments.push({
-        id: generateId(),
+        id: genId(),
         authorId: profileId,
         text: text,
         createdAt: new Date().toISOString()
@@ -417,349 +381,156 @@ function addComment(postId, text) {
     return true;
 }
 
-// --- ОБРАБОТЧИКИ СОБЫТИЙ ---
+// --- EVENTS ---
 
-// Никнейм
-nicknameInput.addEventListener('input', function() {
-    const nickname = this.value.trim();
-    profileNicknameEl.textContent = nickname || 'Без имени';
-    clearTimeout(profileSaveTimer);
-    
-    if (!nickname) {
+// Nickname
+nickInput.addEventListener('input', function() {
+    const nick = this.value.trim();
+    profileNick.textContent = nick || 'NICKNAME';
+    clearTimeout(saveTimer);
+    if (!nick) {
         this.classList.remove('error');
-        nickErrorMsg.style.display = 'none';
+        nickError.classList.remove('visible');
         return;
     }
-    
-    profileSaveTimer = setTimeout(() => {
-        saveProfile(nickname);
-    }, 400);
+    saveTimer = setTimeout(() => saveProfile(nick), 400);
 });
 
-nicknameInput.addEventListener('blur', function() {
-    clearTimeout(profileSaveTimer);
-    const nickname = this.value.trim();
-    if (nickname) saveProfile(nickname);
+nickInput.addEventListener('blur', function() {
+    clearTimeout(saveTimer);
+    const nick = this.value.trim();
+    if (nick) saveProfile(nick);
 });
 
-// Аватар
-profileAvatarEl.addEventListener('click', () => avatarUploadEl.click());
+// Avatar
+profileAvatar.addEventListener('click', () => avatarUpload.click());
 
-avatarUploadEl.addEventListener('change', function(e) {
+avatarUpload.addEventListener('change', function() {
     const file = this.files[0];
     this.value = '';
     if (!file) return;
     
     if (!currentProfile?.nickname) {
-        return showToast('Сначала установите ник!', true);
+        toast('SET NICKNAME FIRST', true);
+        return;
     }
     if (file.size > MAX_AVATAR_SIZE) {
-        return showToast('Аватар должен быть меньше 5 МБ', true);
+        toast('AVATAR MAX 5MB', true);
+        return;
     }
     if (!file.type.startsWith('image/')) {
-        return showToast('Выберите изображение', true);
+        toast('IMAGE ONLY', true);
+        return;
     }
     
     const reader = new FileReader();
     reader.onload = function(e) {
         saveProfile(currentProfile.nickname, e.target.result);
-        showToast('✅ Аватар обновлён');
+        toast('AVATAR UPDATED');
     };
     reader.readAsDataURL(file);
 });
 
-// Медиа
-document.getElementById('attachBtn').addEventListener('click', () => mediaUploadEl.click());
+// Media attach
+document.getElementById('attachBtn').addEventListener('click', () => mediaUpload.click());
 
-mediaUploadEl.addEventListener('change', function(e) {
+mediaUpload.addEventListener('change', function() {
     const files = Array.from(this.files);
     this.value = '';
     
-    let totalSize = pendingMedia.reduce((sum, item) => sum + item.file.size, 0);
+    let total = pendingMedia.reduce((s, i) => s + i.file.size, 0);
     
     for (const file of files) {
         if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-            showToast(`Файл «${file.name}» не поддерживается`, true);
+            toast('UNSUPPORTED FILE', true);
             continue;
         }
-        if (file.size > MAX_FILE_SIZE || totalSize + file.size > MAX_FILE_SIZE) {
-            showToast('Общий размер файлов превышает 67 МБ!', true);
+        if (file.size > MAX_FILE_SIZE || total + file.size > MAX_FILE_SIZE) {
+            toast('MAX 67MB TOTAL', true);
             break;
         }
-        totalSize += file.size;
-        pendingMedia.push({ file, previewUrl: URL.createObjectURL(file) });
+        total += file.size;
+        pendingMedia.push({ file, url: URL.createObjectURL(file) });
     }
     renderMediaPreview();
-    updateUploadStatus();
+    updateUploadInfo();
 });
 
 function renderMediaPreview() {
     if (pendingMedia.length) {
-        mediaPreviewEl.innerHTML = pendingMedia.map((item, index) => `
-            <div class="preview-item" style="position:relative;width:108px;background:#0c0d10;border-radius:8px;overflow:hidden;">
+        mediaPreview.innerHTML = pendingMedia.map((item, i) => `
+            <div class="preview-item">
                 ${item.file.type.startsWith('video/')
-                    ? `<video src="${item.previewUrl}" muted style="width:108px;height:82px;object-fit:cover;display:block;"></video>`
-                    : `<img src="${item.previewUrl}" alt="${escapeHtml(item.file.name)}" style="width:108px;height:82px;object-fit:cover;display:block;">`}
-                <div style="padding:4px 8px;font-size:0.6rem;color:#8d9098;background:#0c0d10;">${escapeHtml(item.file.name)}</div>
-                <button class="remove-media" type="button" data-remove-media="${index}" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border:none;border-radius:50%;background:#ff5353;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;">✕</button>
+                    ? `<video src="${item.url}" muted></video>`
+                    : `<img src="${item.url}">`}
+                <button class="preview-remove" data-remove="${i}">X</button>
             </div>
         `).join('');
     } else {
-        mediaPreviewEl.innerHTML = '';
+        mediaPreview.innerHTML = '';
     }
 }
 
-function updateUploadStatus(customText = '') {
-    if (customText) {
-        uploadStatusEl.textContent = customText;
+function updateUploadInfo(text) {
+    if (text) {
+        uploadInfo.textContent = text;
         return;
     }
-    const totalSize = pendingMedia.reduce((sum, item) => sum + item.file.size, 0);
-    uploadStatusEl.textContent = pendingMedia.length
-        ? `📎 ${pendingMedia.length} файлов (${(totalSize / 1048576).toFixed(1)} МБ)`
+    const total = pendingMedia.reduce((s, i) => s + i.file.size, 0);
+    uploadInfo.textContent = pendingMedia.length
+        ? `${pendingMedia.length} FILES (${(total / 1048576).toFixed(1)} MB)`
         : '';
 }
 
-mediaPreviewEl.addEventListener('click', function(e) {
-    const btn = e.target.closest('[data-remove-media]');
+mediaPreview.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-remove]');
     if (!btn) return;
-    const index = Number(btn.dataset.removeMedia);
-    const [removed] = pendingMedia.splice(index, 1);
-    if (removed) URL.revokeObjectURL(removed.previewUrl);
+    const idx = Number(btn.dataset.remove);
+    const removed = pendingMedia.splice(idx, 1)[0];
+    if (removed) URL.revokeObjectURL(removed.url);
     renderMediaPreview();
-    updateUploadStatus();
+    updateUploadInfo();
 });
 
-// Публикация
-publishBtnEl.addEventListener('click', async function() {
+// Publish
+publishBtn.addEventListener('click', async function() {
     if (!currentProfile?.nickname) {
-        return showToast('Сначала установите ник!', true);
+        toast('SET NICKNAME FIRST', true);
+        return;
     }
     
-    const text = postTextEl.value.trim();
+    const text = postText.value.trim();
     if (!text && pendingMedia.length === 0) {
-        return showToast('Напишите текст или прикрепите медиа', true);
+        toast('TYPE SOMETHING', true);
+        return;
     }
     
     this.disabled = true;
-    this.textContent = '📤 Публикация...';
+    this.textContent = '...';
     
     try {
-        const mediaData = [];
+        const media = [];
         for (const item of pendingMedia) {
             const data = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
                 reader.readAsDataURL(item.file);
             });
-            mediaData.push({
+            media.push({
                 type: item.file.type.startsWith('video/') ? 'video' : 'image',
                 data: data
             });
         }
         
-        createPost(text, mediaData);
+        createPost(text, media);
         
-        postTextEl.value = '';
-        pendingMedia.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+        postText.value = '';
+        pendingMedia.forEach((item) => URL.revokeObjectURL(item.url));
         pendingMedia = [];
         renderMediaPreview();
-        updateUploadStatus();
+        updateUploadInfo();
         
-        setActiveTab('tabFeed', 'feedSection');
+        switchTab('feed');
         
-    } catch (error) {
-        showToast(error.message, true);
-    } finally {
-        this.disabled = false;
-        this.textContent = 'Опубликовать';
-    }
-});
-
-// --- ОБРАБОТЧИКИ КЛИКОВ ---
-
-document.addEventListener('click', function(e) {
-    // Голоса
-    const voteBtn = e.target.closest('[data-vote]');
-    if (voteBtn) {
-        if (!currentProfile?.nickname) {
-            return showToast('Сначала установите ник!', true);
-        }
-        votePost(voteBtn.dataset.postid, Number(voteBtn.dataset.vote));
-        return;
-    }
-    
-    // Комментарии
-    const toggleBtn = e.target.closest('[data-toggle-comments]');
-    if (toggleBtn) {
-        const postId = toggleBtn.dataset.toggleComments;
-        const section = document.getElementById(`comments-${postId}`);
-        if (!section) return;
-        const opening = section.style.display !== 'block';
-        section.style.display = opening ? 'block' : 'none';
-        opening ? openComments.add(postId) : openComments.delete(postId);
-        return;
-    }
-    
-    const commentBtn = e.target.closest('[data-add-comment]');
-    if (commentBtn) {
-        if (!currentProfile?.nickname) {
-            return showToast('Сначала установите ник!', true);
-        }
-        const postId = commentBtn.dataset.addComment;
-        const input = document.getElementById(`comment-input-${postId}`);
-        const text = input?.value.trim();
-        if (!text) return;
-        addComment(postId, text);
-        openComments.add(postId);
-        input.value = '';
-        return;
-    }
-    
-    // Удаление
-    const deleteBtn = e.target.closest('[data-delete-post]');
-    if (deleteBtn) {
-        if (!confirm('Удалить этот пост?')) return;
-        deletePost(deleteBtn.dataset.deletePost);
-        return;
-    }
-});
-
-// Enter для комментариев
-document.addEventListener('keydown', function(e) {
-    if (e.key !== 'Enter' || e.shiftKey || !e.target.classList.contains('comment-input')) return;
-    e.preventDefault();
-    const btn = e.target.closest('.comment-input-row')?.querySelector('[data-add-comment]');
-    if (btn) btn.click();
-});
-
-// Уведомления
-bellBtnEl.addEventListener('click', function() {
-    notificationPanelOpen = !notificationPanelOpen;
-    notificationPanelEl.style.display = notificationPanelOpen ? 'block' : 'none';
-    notificationPanelEl.style.cssText = `
-        position:absolute;z-index:20;top:68px;right:14px;
-        display:${notificationPanelOpen ? 'block' : 'none'};
-        width:min(360px,calc(100% - 28px));
-        max-height:340px;overflow:auto;
-        border:1px solid #2a2c32;border-radius:8px;
-        background:#14161a;box-shadow:0 18px 50px rgba(0,0,0,0.55);
-    `;
-    if (notificationPanelOpen) {
-        renderNotifications();
-        const data = getData();
-        if (data.notifications) {
-            data.notifications.forEach(n => { n.read = true; });
-            saveData(data);
-            updateNotifCount();
-        }
-    }
-});
-
-document.addEventListener('click', function(e) {
-    if (!notificationPanelOpen) return;
-    if (bellBtnEl.contains(e.target) || notificationPanelEl.contains(e.target)) return;
-    notificationPanelOpen = false;
-    notificationPanelEl.style.display = 'none';
-});
-
-// Вкладки
-function setActiveTab(buttonId, sectionId) {
-    document.querySelectorAll('.tabs button').forEach(btn => {
-        btn.classList.toggle('active', btn.id === buttonId);
-    });
-    document.querySelectorAll('.section').forEach(section => {
-        section.classList.toggle('active', section.id === sectionId);
-    });
-}
-
-document.getElementById('tabFeed').addEventListener('click', () => setActiveTab('tabFeed', 'feedSection'));
-document.getElementById('tabCreate').addEventListener('click', () => setActiveTab('tabCreate', 'createSection'));
-document.getElementById('tabProfile').addEventListener('click', () => setActiveTab('tabProfile', 'profileSection'));
-
-// --- ДЕМО-ПОСТЫ ---
-
-function addDemoPosts() {
-    const data = getData();
-    if (data.posts.length > 0) return;
-    
-    if (!data.profiles['demo_user']) {
-        data.profiles['demo_user'] = {
-            nickname: '🌟 Демо-пользователь',
-            avatarData: DEFAULT_AVATAR,
-            createdAt: new Date().toISOString()
-        };
-    }
-    
-    data.posts = [
-        {
-            id: generateId(),
-            authorId: 'demo_user',
-            text: '👋 Добро пожаловать в DARK FORT\PORT!\n\nЗдесь вы можете:\n📝 Публиковать посты\n❤️ Ставить лайки\n💬 Комментировать\n🖼️ Прикреплять фото и видео\n\nУстановите свой ник и аватар!',
-            media: [],
-            likes: 2,
-            dislikes: 0,
-            votes: {},
-            comments: [
-                {
-                    id: generateId(),
-                    authorId: profileId,
-                    text: '🔥 Круто!',
-                    createdAt: new Date(Date.now() - 120000).toISOString()
-                }
-            ],
-            createdAt: new Date(Date.now() - 300000).toISOString()
-        },
-        {
-            id: generateId(),
-            authorId: 'demo_user',
-            text: '💡 Нажмите на аватар чтобы загрузить своё фото. Ник можно изменить в любой момент.',
-            media: [],
-            likes: 1,
-            dislikes: 0,
-            votes: {},
-            comments: [],
-            createdAt: new Date(Date.now() - 600000).toISOString()
-        }
-    ];
-    
-    saveData(data);
-}
-
-// --- СИНХРОНИЗАЦИЯ МЕЖДУ ВКЛАДКАМИ ---
-
-function initSync() {
-    try {
-        const channel = new BroadcastChannel('social_channel');
-        channel.onmessage = function(e) {
-            if (e.data?.type === 'update') {
-                loadData();
-            }
-        };
-        return channel;
     } catch (e) {
-        return null;
-    }
-}
-
-// --- ИНИЦИАЛИЗАЦИЯ ---
-
-function init() {
-    addDemoPosts();
-    initSync();
-    loadData();
-    
-    if (!currentProfile?.nickname) {
-        nicknameInput.focus();
-        nicknameInput.placeholder = '👤 Введите ваш ник...';
-    }
-    
-    // Авто-обновление
-    setInterval(loadData, 10000);
-    
-    console.log('✅ Анонимная социальная сеть запущена!');
-    console.log('👤 Ваш ID:', profileId);
-    console.log('📦 Данные в localStorage');
-}
-
-init();
+        toast(e.message, true

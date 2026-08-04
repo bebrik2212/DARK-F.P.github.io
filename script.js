@@ -1,27 +1,31 @@
 // ============================================================
 // DARK FORT - СОЦИАЛЬНАЯ СЕТЬ
-// ВСЕ ПОСТЫ ОБЩИЕ, АНОНИМНО (ТОЛЬКО НИК И АВАТАР)
+// БЭКЕНД: BREWPAGE (БЕСПЛАТНО, БЕЗ VPN, БЕЗ РЕГИСТРАЦИИ)
 // ============================================================
 
 const DEFAULT_AVATAR = 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg';
 const MAX_FILE_SIZE = 67 * 1024 * 1024;
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
-// --- ID ПОЛЬЗОВАТЕЛЯ ---
+// --- ID ПОЛЬЗОВАТЕЛЯ (локальный, анонимный) ---
 let profileId = localStorage.getItem('df_profile_id');
 if (!profileId) {
     profileId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     localStorage.setItem('df_profile_id', profileId);
 }
 
+// --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
 let currentProfile = null;
 let allPosts = [];
 let pendingMedia = [];
 let saveTimer = 0;
 let notifOpen = false;
+let isSyncing = false;
+let ownerToken = localStorage.getItem('df_owner_token') || null;
+let cloudData = null;
 const openComments = new Set();
 
-// --- DOM ---
+// --- DOM ЭЛЕМЕНТЫ ---
 const nicknameInput = document.getElementById('nicknameInput');
 const profileAvatarEl = document.getElementById('profileAvatar');
 const profileBigAvatarEl = document.getElementById('profileBigAvatar');
@@ -39,55 +43,167 @@ const uploadStatusEl = document.getElementById('uploadStatus');
 const postsListFeedEl = document.getElementById('postsListFeed');
 const postsListProfileEl = document.getElementById('postsListProfile');
 
-// --- РАБОТА С ДАННЫМИ ---
+// ============================================================
+// РАБОТА С BREWPAGE API
+// ============================================================
 
-function getData() {
+async function loadFromCloud() {
     try {
-        const raw = localStorage.getItem('df_data');
-        if (raw) {
-            const data = JSON.parse(raw);
-            if (!data.posts) data.posts = [];
-            if (!data.profiles) data.profiles = {};
-            if (!data.notifs) data.notifs = [];
-            return data;
+        const response = await fetch(BREWPAGE_URL, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'DarkFort/1.0'
+            }
+        });
+        
+        // Если документа нет (404) - создаём
+        if (response.status === 404) {
+            return await createDocument();
         }
-    } catch (e) {}
-    return { posts: [], profiles: {}, notifs: [] };
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Сохраняем токен, если он пришёл
+        if (data.ownerToken) {
+            ownerToken = data.ownerToken;
+            localStorage.setItem('df_owner_token', ownerToken);
+        }
+        
+        // Сохраняем в кэш
+        localStorage.setItem('df_cache', JSON.stringify(data));
+        return data;
+    } catch (error) {
+        console.warn('Ошибка загрузки из облака:', error);
+        // Пробуем кэш
+        const cached = localStorage.getItem('df_cache');
+        if (cached) {
+            try {
+                return JSON.parse(cached);
+            } catch (e) {}
+        }
+        // Если кэша нет - создаём пустую структуру
+        return { posts: [], profiles: {}, notifications: [] };
+    }
 }
 
-function saveData(data) {
-    try {
-        localStorage.setItem('df_data', JSON.stringify(data));
-        // Синхронизация между вкладками
-        try {
-            const ch = new BroadcastChannel('df_channel');
-            ch.postMessage({ type: 'update' });
-            ch.close();
-        } catch (e) {}
-    } catch (e) {}
-}
-
-// --- ЗАГРУЗКА ДАННЫХ ---
-
-function loadData() {
-    const data = getData();
+async function createDocument() {
+    const initialData = {
+        posts: [],
+        profiles: {},
+        notifications: [],
+        created: new Date().toISOString()
+    };
     
-    // Профиль
-    if (data.profiles[profileId]) {
-        currentProfile = data.profiles[profileId];
+    try {
+        const response = await fetch(BREWPAGE_CREATE_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'DarkFort/1.0'
+            },
+            body: JSON.stringify(initialData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        // Сохраняем токен владельца
+        if (result.ownerToken) {
+            ownerToken = result.ownerToken;
+            localStorage.setItem('df_owner_token', ownerToken);
+        }
+        
+        localStorage.setItem('df_cache', JSON.stringify(initialData));
+        return initialData;
+    } catch (error) {
+        console.warn('Ошибка создания документа:', error);
+        return { posts: [], profiles: {}, notifications: [] };
+    }
+}
+
+async function saveToCloud(data) {
+    if (isSyncing) return false;
+    isSyncing = true;
+    
+    try {
+        // Если нет токена - пытаемся создать документ заново
+        if (!ownerToken) {
+            const result = await createDocument();
+            if (result) {
+                isSyncing = false;
+                return true;
+            }
+        }
+        
+        const response = await fetch(BREWPAGE_URL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'DarkFort/1.0',
+                'X-Owner-Token': ownerToken || ''
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.status === 401 || response.status === 403) {
+            // Токен невалидный - создаём новый документ
+            ownerToken = null;
+            localStorage.removeItem('df_owner_token');
+            await createDocument();
+            isSyncing = false;
+            return true;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        localStorage.setItem('df_cache', JSON.stringify(data));
+        isSyncing = false;
+        return true;
+    } catch (error) {
+        console.warn('Ошибка сохранения в облако:', error);
+        isSyncing = false;
+        return false;
+    }
+}
+
+// ============================================================
+// РАБОТА С ДАННЫМИ
+// ============================================================
+
+async function loadData() {
+    cloudData = await loadFromCloud();
+    
+    // Убеждаемся, что все поля есть
+    if (!cloudData.posts) cloudData.posts = [];
+    if (!cloudData.profiles) cloudData.profiles = {};
+    if (!cloudData.notifications) cloudData.notifications = [];
+    
+    // Профиль текущего пользователя
+    if (cloudData.profiles[profileId]) {
+        currentProfile = cloudData.profiles[profileId];
     } else {
-        data.profiles[profileId] = {
+        cloudData.profiles[profileId] = {
             nickname: '',
             avatarData: DEFAULT_AVATAR,
             created: new Date().toISOString()
         };
-        saveData(data);
-        currentProfile = data.profiles[profileId];
+        await saveToCloud(cloudData);
+        currentProfile = cloudData.profiles[profileId];
     }
     
-    // Посты с данными авторов
-    allPosts = data.posts.map(p => {
-        const author = data.profiles[p.authorId];
+    // Обогащаем посты данными авторов
+    allPosts = cloudData.posts.map(p => {
+        const author = cloudData.profiles[p.authorId];
         return {
             ...p,
             authorName: author?.nickname || 'АНОНИМ',
@@ -98,7 +214,29 @@ function loadData() {
     updateUI();
 }
 
-// --- ОБНОВЛЕНИЕ UI ---
+async function syncData() {
+    if (isSyncing) return;
+    const fresh = await loadFromCloud();
+    if (fresh) {
+        cloudData = fresh;
+        if (cloudData.profiles[profileId]) {
+            currentProfile = cloudData.profiles[profileId];
+        }
+        allPosts = cloudData.posts.map(p => {
+            const author = cloudData.profiles[p.authorId];
+            return {
+                ...p,
+                authorName: author?.nickname || 'АНОНИМ',
+                authorAvatar: author?.avatarData || DEFAULT_AVATAR,
+            };
+        });
+        updateUI();
+    }
+}
+
+// ============================================================
+// UI ФУНКЦИИ
+// ============================================================
 
 function updateUI() {
     updateProfileUI();
@@ -126,14 +264,18 @@ function updateProfileUI() {
 function renderAllPosts() {
     const sorted = [...allPosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
-    // Лента
     if (sorted.length) {
         postsListFeedEl.innerHTML = sorted.map(p => renderPostCard(p)).join('');
     } else {
-        postsListFeedEl.innerHTML = '<div class="empty-posts">ПОКА НЕТ ПОСТОВ</div>';
+        postsListFeedEl.innerHTML = `
+            <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
+                <div style="font-size:48px;margin-bottom:12px;">🌐</div>
+                <div>ПОКА НЕТ ПОСТОВ</div>
+                <div style="font-size:0.85rem;color:#5a5d66;">БУДЬТЕ ПЕРВЫМ</div>
+            </div>
+        `;
     }
     
-    // Мои посты
     const myPosts = sorted.filter(p => p.authorId === profileId);
     if (myPosts.length) {
         postsListProfileEl.innerHTML = myPosts.map(p => renderPostCard(p)).join('');
@@ -160,9 +302,8 @@ function renderPostCard(post) {
     }
     
     const comments = post.comments || [];
-    const data = getData();
     const commentsHTML = comments.map(c => {
-        const author = data.profiles[c.authorId];
+        const author = cloudData?.profiles[c.authorId];
         return `
             <div class="comment">
                 <img class="comment-avatar" src="${author?.avatarData || DEFAULT_AVATAR}">
@@ -210,15 +351,13 @@ function renderPostCard(post) {
 }
 
 function updateNotifCount() {
-    const data = getData();
-    const count = data.notifs?.filter(n => !n.read).length || 0;
+    const count = cloudData?.notifications?.filter(n => !n.read).length || 0;
     notifCountEl.textContent = count;
     notifCountEl.classList.toggle('visible', count > 0);
 }
 
 function renderNotifications() {
-    const data = getData();
-    const notifs = data.notifs || [];
+    const notifs = cloudData?.notifications || [];
     if (notifs.length) {
         notificationPanelEl.innerHTML = notifs.map(n => `
             <div class="notif-item">${escapeHtml(n.message)}<span class="notif-time">${formatDate(n.createdAt)}</span></div>
@@ -228,7 +367,9 @@ function renderNotifications() {
     }
 }
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ---
+// ============================================================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ============================================================
 
 function escapeHtml(v) {
     const d = document.createElement('div');
@@ -260,13 +401,16 @@ function genId() {
     return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
 }
 
-// --- ПРОФИЛЬ ---
+// ============================================================
+// ПРОФИЛЬ
+// ============================================================
 
-function saveProfile(nick, avatar) {
-    const data = getData();
+async function saveProfile(nick, avatar) {
+    if (!cloudData) return false;
     
-    const taken = Object.keys(data.profiles).some(id =>
-        id !== profileId && data.profiles[id]?.nickname?.toLowerCase() === nick.toLowerCase()
+    // Проверка занятости ника
+    const taken = Object.keys(cloudData.profiles).some(id =>
+        id !== profileId && cloudData.profiles[id]?.nickname?.toLowerCase() === nick.toLowerCase()
     );
     
     if (taken && nick) {
@@ -275,33 +419,37 @@ function saveProfile(nick, avatar) {
         return false;
     }
     
-    if (!data.profiles[profileId]) {
-        data.profiles[profileId] = {};
+    if (!cloudData.profiles[profileId]) {
+        cloudData.profiles[profileId] = {};
     }
     
-    if (nick) data.profiles[profileId].nickname = nick;
-    if (avatar) data.profiles[profileId].avatarData = avatar;
-    data.profiles[profileId].updated = new Date().toISOString();
+    if (nick) cloudData.profiles[profileId].nickname = nick;
+    if (avatar) cloudData.profiles[profileId].avatarData = avatar;
+    cloudData.profiles[profileId].updated = new Date().toISOString();
     
-    saveData(data);
-    currentProfile = data.profiles[profileId];
-    
-    nicknameInput.classList.remove('error');
-    nickErrorMsg.classList.remove('visible');
-    
-    updateUI();
-    return true;
+    const saved = await saveToCloud(cloudData);
+    if (saved) {
+        currentProfile = cloudData.profiles[profileId];
+        nicknameInput.classList.remove('error');
+        nickErrorMsg.classList.remove('visible');
+        updateUI();
+        return true;
+    }
+    return false;
 }
 
-// --- ПОСТЫ ---
+// ============================================================
+// ПОСТЫ
+// ============================================================
 
-function createPost(text, media) {
-    const data = getData();
-    
+async function createPost(text, media) {
     if (!currentProfile?.nickname) {
         showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
         return false;
     }
+    
+    if (!cloudData) return false;
+    if (!cloudData.posts) cloudData.posts = [];
     
     const post = {
         id: genId(),
@@ -315,31 +463,37 @@ function createPost(text, media) {
         createdAt: new Date().toISOString()
     };
     
-    data.posts.unshift(post);
-    saveData(data);
-    loadData();
-    showToast('ПОСТ ОПУБЛИКОВАН');
-    return true;
+    cloudData.posts.unshift(post);
+    const saved = await saveToCloud(cloudData);
+    if (saved) {
+        await loadData();
+        showToast('ПОСТ ОПУБЛИКОВАН');
+        return true;
+    }
+    return false;
 }
 
-function deletePost(id) {
-    const data = getData();
-    const idx = data.posts.findIndex(p => p.id === id);
+async function deletePost(id) {
+    if (!cloudData) return false;
+    const idx = cloudData.posts.findIndex(p => p.id === id);
     if (idx === -1) return false;
-    if (data.posts[idx].authorId !== profileId) {
+    if (cloudData.posts[idx].authorId !== profileId) {
         showToast('НЕ ВАШ ПОСТ', true);
         return false;
     }
-    data.posts.splice(idx, 1);
-    saveData(data);
-    loadData();
-    showToast('ПОСТ УДАЛЁН');
-    return true;
+    cloudData.posts.splice(idx, 1);
+    const saved = await saveToCloud(cloudData);
+    if (saved) {
+        await loadData();
+        showToast('ПОСТ УДАЛЁН');
+        return true;
+    }
+    return false;
 }
 
-function votePost(id, val) {
-    const data = getData();
-    const post = data.posts.find(p => p.id === id);
+async function votePost(id, val) {
+    if (!cloudData) return false;
+    const post = cloudData.posts.find(p => p.id === id);
     if (!post) return false;
     
     const cur = post.votes?.[profileId] || 0;
@@ -358,14 +512,17 @@ function votePost(id, val) {
         else post.dislikes++;
     }
     
-    saveData(data);
-    loadData();
-    return true;
+    const saved = await saveToCloud(cloudData);
+    if (saved) {
+        await loadData();
+        return true;
+    }
+    return false;
 }
 
-function addComment(postId, text) {
-    const data = getData();
-    const post = data.posts.find(p => p.id === postId);
+async function addComment(postId, text) {
+    if (!cloudData) return false;
+    const post = cloudData.posts.find(p => p.id === postId);
     if (!post) return false;
     
     if (!currentProfile?.nickname) {
@@ -381,12 +538,17 @@ function addComment(postId, text) {
         createdAt: new Date().toISOString()
     });
     
-    saveData(data);
-    loadData();
-    return true;
+    const saved = await saveToCloud(cloudData);
+    if (saved) {
+        await loadData();
+        return true;
+    }
+    return false;
 }
 
-// --- СОБЫТИЯ ---
+// ============================================================
+// СОБЫТИЯ
+// ============================================================
 
 // Никнейм
 nicknameInput.addEventListener('input', function() {
@@ -528,7 +690,7 @@ publishBtnEl.addEventListener('click', async function() {
             });
         }
         
-        createPost(text, media);
+        await createPost(text, media);
         
         postTextEl.value = '';
         pendingMedia.forEach((item) => URL.revokeObjectURL(item.url));
@@ -546,10 +708,11 @@ publishBtnEl.addEventListener('click', async function() {
     }
 });
 
-// --- КЛИКИ ---
+// ============================================================
+// КЛИКИ
+// ============================================================
 
 document.addEventListener('click', function(e) {
-    // Голоса
     const voteBtn = e.target.closest('[data-vote]');
     if (voteBtn) {
         if (!currentProfile?.nickname) {
@@ -560,7 +723,6 @@ document.addEventListener('click', function(e) {
         return;
     }
     
-    // Комментарии
     const toggleBtn = e.target.closest('[data-toggle]');
     if (toggleBtn) {
         const id = toggleBtn.dataset.toggle;
@@ -588,7 +750,6 @@ document.addEventListener('click', function(e) {
         return;
     }
     
-    // Удаление
     const delBtn = e.target.closest('[data-delete]');
     if (delBtn) {
         if (!confirm('УДАЛИТЬ ПОСТ?')) return;
@@ -611,10 +772,9 @@ bellBtnEl.addEventListener('click', function() {
     notificationPanelEl.style.display = notifOpen ? 'block' : 'none';
     if (notifOpen) {
         renderNotifications();
-        const data = getData();
-        if (data.notifs) {
-            data.notifs.forEach(n => { n.read = true; });
-            saveData(data);
+        if (cloudData?.notifications) {
+            cloudData.notifications.forEach(n => { n.read = true; });
+            saveToCloud(cloudData);
             updateNotifCount();
         }
     }
@@ -641,32 +801,23 @@ document.getElementById('tabFeed').addEventListener('click', () => setActiveTab(
 document.getElementById('tabCreate').addEventListener('click', () => setActiveTab('tabCreate', 'createSection'));
 document.getElementById('tabProfile').addEventListener('click', () => setActiveTab('tabProfile', 'profileSection'));
 
-// --- СИНХРОНИЗАЦИЯ МЕЖДУ ВКЛАДКАМИ ---
+// ============================================================
+// ДЕМО-ПОСТЫ
+// ============================================================
 
-function initSync() {
-    try {
-        const ch = new BroadcastChannel('df_channel');
-        ch.onmessage = function(e) {
-            if (e.data?.type === 'update') loadData();
-        };
-    } catch (e) {}
-}
-
-// --- ДЕМО-ПОСТЫ ---
-
-function addDemoPosts() {
-    const data = getData();
-    if (data.posts.length > 0) return;
+async function addDemoPosts() {
+    if (!cloudData) return;
+    if (cloudData.posts.length > 0) return;
     
-    if (!data.profiles['demo']) {
-        data.profiles['demo'] = {
+    if (!cloudData.profiles['demo']) {
+        cloudData.profiles['demo'] = {
             nickname: 'DARK FORT',
             avatarData: DEFAULT_AVATAR,
             created: new Date().toISOString()
         };
     }
     
-    data.posts = [
+    cloudData.posts = [
         {
             id: genId(),
             authorId: 'demo',
@@ -687,24 +838,27 @@ function addDemoPosts() {
         }
     ];
     
-    saveData(data);
+    await saveToCloud(cloudData);
 }
 
-// --- ЗАПУСК ---
+// ============================================================
+// ЗАПУСК
+// ============================================================
 
-function init() {
-    addDemoPosts();
-    initSync();
-    loadData();
+async function init() {
+    await loadData();
+    await addDemoPosts();
     
     if (!currentProfile?.nickname) {
         nicknameInput.focus();
     }
     
-    setInterval(loadData, 10000);
+    // Авто-синхронизация каждые 15 секунд
+    setInterval(syncData, 15000);
     
     console.log('DARK FORT PORT ONLINE');
     console.log('ID:', profileId);
+    console.log('STORAGE:', BREWPAGE_URL);
 }
 
 init();

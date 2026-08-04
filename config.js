@@ -5,11 +5,11 @@
 // BrewPage работает через простые POST/GET запросы
 // Данные хранятся по адресу: https://brewpage.app/api/json
 
-// Выберите уникальное имя для вашего хранилища
-// Например: dark-fort-data
-const NAMESPACE = 'dark-fort-data';
+// УНИКАЛЬНОЕ ИМЯ ДЛЯ ВАШЕГО ХРАНИЛИЩА
+// Можете придумать любое, например: dark-fort-2024
+const NAMESPACE = 'dark-fort-2024';
 
-// ID вашего документа (можно создать один документ для всех данных)
+// ID документа (одна база данных для всех данных)
 const DOC_ID = 'social-data';
 
 // Полный URL для доступа к данным
@@ -32,3 +32,7 @@ function getHeaders(ownerToken) {
     
     return headers;
 }
+
+// Экспортируем для использования в других файлах
+// (если используете модули, раскомментируйте)
+// export { NAMESPACE, DOC_ID, DATA_URL, CREATE_URL, getHeaders };

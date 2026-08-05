@@ -1,6 +1,6 @@
 const ADMIN_NICKNAMES = ['amamammellstroy67'];
 const DEFAULT_AVATAR = 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg';
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // Увеличено до 50 МБ
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
 let profileId = localStorage.getItem('df_profile_id');
@@ -19,6 +19,7 @@ const openComments = new Set();
 let unsubscribePosts = null;
 let chatWith = null;
 let unsubscribeChat = null;
+let searchMode = 'users';
 
 const nicknameInput = document.getElementById('nicknameInput');
 const profileAvatarEl = document.getElementById('profileAvatar');
@@ -46,6 +47,8 @@ const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
 const sendChatBtn = document.getElementById('sendChatBtn');
 const closeChatBtn = document.getElementById('closeChatBtn');
+const searchUsersTab = document.getElementById('searchUsersTab');
+const searchPostsTab = document.getElementById('searchPostsTab');
 
 function getCachedData() {
     try {
@@ -154,7 +157,7 @@ function subscribeToPosts() {
         unsubscribePosts = null;
     }
 
-    postsListFeedEl.innerHTML = '<div class="empty-posts">⏳ ЗАГРУЗКА...</div>';
+    postsListFeedEl.innerHTML = '<div class="empty-posts">ЗАГРУЗКА...</div>';
 
     unsubscribePosts = db.collection('posts')
         .orderBy('createdAt', 'desc')
@@ -220,7 +223,7 @@ async function createPost(text, media) {
             comments: [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        showToast('✅ ПОСТ ОПУБЛИКОВАН');
+        showToast('ПОСТ ОПУБЛИКОВАН');
         return true;
     } catch (error) {
         console.error('Ошибка публикации:', error);
@@ -247,7 +250,7 @@ async function deletePost(postId) {
         }
 
         await db.collection('posts').doc(postId).delete();
-        showToast(isAdmin ? '🗑️ ПОСТ УДАЛЁН (АДМИН)' : 'ПОСТ УДАЛЁН');
+        showToast(isAdmin ? 'ПОСТ УДАЛЁН (АДМИН)' : 'ПОСТ УДАЛЁН');
         return true;
     } catch (error) {
         console.error('Ошибка удаления:', error);
@@ -370,7 +373,7 @@ function renderPostCard(post) {
     const canDelete = isMine || isAdmin;
     
     const deleteBtn = canDelete ? `
-        <button class="delete-post-btn" data-delete="${post.id}" type="button">✕</button>
+        <button class="delete-post-btn" data-delete="${post.id}" type="button">X</button>
     ` : '';
 
     let mediaHTML = '';
@@ -469,6 +472,7 @@ function showToast(msg, err = false) {
     setTimeout(() => t.remove(), 3000);
 }
 
+// ===== ПОИСК =====
 async function searchUsers(query) {
     if (!query.trim()) {
         searchResults.innerHTML = '<div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>';
@@ -483,7 +487,7 @@ async function searchUsers(query) {
             .get();
 
         if (snapshot.empty) {
-            searchResults.innerHTML = '<div class="empty-posts">ПОРТЫ НЕ НАЙДЕНЫ</div>';
+            searchResults.innerHTML = '<div class="empty-posts">ПОЛЬЗОВАТЕЛИ НЕ НАЙДЕНЫ</div>';
             return;
         }
 
@@ -499,14 +503,14 @@ async function searchUsers(query) {
                     <div class="search-result-info">
                         <div class="search-result-nick">${escapeHtml(data.nickname || 'АНОНИМ')}</div>
                         <div class="search-result-status ${data.online ? 'online' : ''}">
-                            ${data.online ? '🟢 В СЕТИ' : '⚫ ОФФЛАЙН'}
+                            ${data.online ? 'В СЕТИ' : 'ОФФЛАЙН'}
                             ${isSelf ? ' (ЭТО ВЫ)' : ''}
-                            ${isFriend ? ' 🤝 ДРУГ' : ''}
+                            ${isFriend ? ' ДРУГ' : ''}
                         </div>
                     </div>
                     ${!isSelf ? `
                         <button class="btn" data-add-friend="${doc.id}" style="font-size:9px;padding:2px 8px;">
-                            ${isFriend ? '❌ УДАЛИТЬ' : '➕ ДОБАВИТЬ'}
+                            ${isFriend ? 'УДАЛИТЬ' : 'ДОБАВИТЬ'}
                         </button>
                     ` : ''}
                 </div>
@@ -520,6 +524,76 @@ async function searchUsers(query) {
     }
 }
 
+async function searchPosts(query) {
+    if (!query.trim()) {
+        searchResults.innerHTML = '<div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>';
+        return;
+    }
+
+    try {
+        // Ищем посты по тексту
+        const snapshot = await db.collection('posts')
+            .orderBy('createdAt', 'desc')
+            .limit(100)
+            .get();
+
+        const results = [];
+        const queryLower = query.toLowerCase().trim();
+
+        for (const doc of snapshot.docs) {
+            const data = doc.data();
+            const text = (data.text || '').toLowerCase();
+            if (text.includes(queryLower)) {
+                let authorName = 'АНОНИМ';
+                if (data.authorId) {
+                    try {
+                        const authorDoc = await db.collection('profiles').doc(data.authorId).get();
+                        if (authorDoc.exists) {
+                            authorName = authorDoc.data().nickname || 'АНОНИМ';
+                        }
+                    } catch (e) {}
+                }
+                results.push({
+                    id: doc.id,
+                    ...data,
+                    authorName: authorName
+                });
+            }
+        }
+
+        if (!results.length) {
+            searchResults.innerHTML = '<div class="empty-posts">ПОСТЫ НЕ НАЙДЕНЫ</div>';
+            return;
+        }
+
+        let html = '';
+        results.forEach(post => {
+            const postTime = post.createdAt?.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
+            html += `
+                <div class="search-result-post" data-post="${post.id}">
+                    <div class="post-author">${escapeHtml(post.authorName)}</div>
+                    <div class="post-content">${escapeHtml(post.text || '')}</div>
+                    <div class="post-date">${formatDate(postTime)}</div>
+                </div>
+            `;
+        });
+
+        searchResults.innerHTML = html;
+    } catch (error) {
+        console.error('Ошибка поиска постов:', error);
+        searchResults.innerHTML = '<div class="empty-posts">ОШИБКА ПОИСКА</div>';
+    }
+}
+
+function performSearch(query) {
+    if (searchMode === 'users') {
+        searchUsers(query);
+    } else {
+        searchPosts(query);
+    }
+}
+
+// ===== ДРУЗЬЯ =====
 async function loadFriends() {
     if (!currentProfile) return;
 
@@ -541,12 +615,12 @@ async function loadFriends() {
                         <div class="friend-info">
                             <div class="friend-nick">${escapeHtml(data.nickname || 'АНОНИМ')}</div>
                             <div class="friend-status ${data.online ? 'online' : ''}">
-                                ${data.online ? '🟢 В СЕТИ' : '⚫ ОФФЛАЙН'}
+                                ${data.online ? 'В СЕТИ' : 'ОФФЛАЙН'}
                             </div>
                         </div>
                         <div class="friend-actions">
                             <button class="chat-friend" data-chat="${friendId}">💬</button>
-                            <button class="remove-friend" data-remove-friend="${friendId}">✕</button>
+                            <button class="remove-friend" data-remove-friend="${friendId}">X</button>
                         </div>
                     </div>
                 `;
@@ -578,7 +652,7 @@ async function addFriend(userId) {
     try {
         await db.collection('profiles').doc(profileId).update({ friends });
         setCachedData({ profile: currentProfile });
-        showToast('✅ ДРУГ ДОБАВЛЕН');
+        showToast('ДРУГ ДОБАВЛЕН');
         loadFriends();
         return true;
     } catch (error) {
@@ -611,6 +685,7 @@ async function removeFriend(userId) {
     }
 }
 
+// ===== ЧАТ =====
 function openChat(userId, userNickname) {
     chatWith = userId;
     chatFriendName.textContent = userNickname || 'ДРУГ';
@@ -700,13 +775,14 @@ async function sendMessage(text) {
 
         await chatRef.set({ messages }, { merge: true });
         chatInput.value = '';
-        showToast('✅ СООБЩЕНИЕ ОТПРАВЛЕНО');
+        showToast('СООБЩЕНИЕ ОТПРАВЛЕНО');
     } catch (error) {
         console.error('Ошибка отправки:', error);
         showToast('ОШИБКА ОТПРАВКИ', true);
     }
 }
 
+// ===== СОБЫТИЯ =====
 nicknameInput.addEventListener('input', function() {
     const nick = this.value.trim();
     profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
@@ -763,7 +839,7 @@ mediaUploadEl.addEventListener('change', function() {
             continue;
         }
         if (file.size > MAX_FILE_SIZE || total + file.size > MAX_FILE_SIZE) {
-            showToast('МАКСИМУМ 10 МБ', true);
+            showToast('МАКСИМУМ 50 МБ', true);
             break;
         }
         total += file.size;
@@ -781,7 +857,7 @@ function renderMediaPreview() {
                     ? `<video src="${item.url}" muted></video>`
                     : `<img src="${item.url}">`}
                 <div class="preview-size">${escapeHtml(item.file.name)}</div>
-                <button class="remove-media" data-remove="${i}" type="button">✕</button>
+                <button class="remove-media" data-remove="${i}" type="button">X</button>
             </div>
         `).join('');
     } else {
@@ -904,7 +980,7 @@ document.addEventListener('click', function(e) {
         } else {
             addFriend(userId);
         }
-        searchUsers(searchInput.value);
+        performSearch(searchInput.value);
         return;
     }
 
@@ -924,6 +1000,23 @@ document.addEventListener('click', function(e) {
         openChat(userId, nick);
         return;
     }
+
+    const postResult = e.target.closest('[data-post]');
+    if (postResult) {
+        const postId = postResult.dataset.post;
+        setActiveTab('tabFeed', 'feedSection');
+        setTimeout(() => {
+            const postEl = document.querySelector(`.post-card[data-id="${postId}"]`);
+            if (postEl) {
+                postEl.scrollIntoView({ behavior: 'smooth' });
+                postEl.style.borderColor = 'var(--accent)';
+                setTimeout(() => {
+                    postEl.style.borderColor = '';
+                }, 3000);
+            }
+        }, 100);
+        return;
+    }
 });
 
 document.addEventListener('keydown', function(e) {
@@ -931,13 +1024,33 @@ document.addEventListener('keydown', function(e) {
         e.preventDefault();
         sendChatBtn.click();
     }
+    if (e.key === 'Enter' && e.target === searchInput) {
+        e.preventDefault();
+        performSearch(searchInput.value);
+    }
 });
 
 searchInput.addEventListener('input', function() {
     clearTimeout(this._searchTimer);
     this._searchTimer = setTimeout(() => {
-        searchUsers(this.value);
+        performSearch(this.value);
     }, 300);
+});
+
+searchUsersTab.addEventListener('click', function() {
+    searchMode = 'users';
+    searchUsersTab.classList.add('active');
+    searchPostsTab.classList.remove('active');
+    searchInput.placeholder = 'ВВЕДИТЕ НИК ПОЛЬЗОВАТЕЛЯ...';
+    performSearch(searchInput.value);
+});
+
+searchPostsTab.addEventListener('click', function() {
+    searchMode = 'posts';
+    searchPostsTab.classList.add('active');
+    searchUsersTab.classList.remove('active');
+    searchInput.placeholder = 'ВВЕДИТЕ ТЕКСТ ДЛЯ ПОИСКА...';
+    performSearch(searchInput.value);
 });
 
 bellBtnEl.addEventListener('click', function() {
@@ -966,6 +1079,9 @@ function setActiveTab(buttonId, sectionId) {
     if (sectionId === 'friendsSection') {
         loadFriends();
     }
+    if (sectionId === 'searchSection') {
+        performSearch(searchInput.value);
+    }
 }
 
 document.getElementById('tabFeed').addEventListener('click', () => setActiveTab('tabFeed', 'feedSection'));
@@ -976,6 +1092,10 @@ document.getElementById('tabProfile').addEventListener('click', () => setActiveT
 
 addFriendBtn.addEventListener('click', function() {
     setActiveTab('tabSearch', 'searchSection');
+    searchMode = 'users';
+    searchUsersTab.classList.add('active');
+    searchPostsTab.classList.remove('active');
+    searchInput.placeholder = 'ВВЕДИТЕ НИК ПОЛЬЗОВАТЕЛЯ...';
     searchInput.focus();
 });
 
@@ -993,11 +1113,11 @@ document.addEventListener('keydown', function(e) {
 
 async function init() {
     try {
-        console.log('🔥 DARK FORT INIT');
-        console.log('📦 PROJECT:', firebaseConfig.projectId);
+        console.log('DARK FORT INIT');
+        console.log('PROJECT:', firebaseConfig.projectId);
 
         await db.collection('_test').doc('test').set({ test: true });
-        console.log('✅ Firebase подключен');
+        console.log('Firebase подключен');
 
         await getOrCreateProfile();
         subscribeToPosts();
@@ -1019,9 +1139,9 @@ async function init() {
             }
         });
 
-        console.log('✅ DARK FORT ONLINE');
+        console.log('DARK FORT ONLINE');
     } catch (error) {
-        console.error('❌ Ошибка:', error);
+        console.error('Ошибка:', error);
         showToast('ОШИБКА ПОДКЛЮЧЕНИЯ К FIREBASE', true);
         
         const cached = getCachedData();
@@ -1032,7 +1152,7 @@ async function init() {
         
         postsListFeedEl.innerHTML = `
             <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
-                <div style="font-size:48px;margin-bottom:12px;">📡</div>
+                <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
                 <div>ОФФЛАЙН РЕЖИМ</div>
                 <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
                 <button onclick="subscribeToPosts()" style="margin-top:12px;padding:8px 20px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>

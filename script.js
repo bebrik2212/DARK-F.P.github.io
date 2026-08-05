@@ -1118,18 +1118,21 @@ let stepaDifficulty = 'medium';
 
 const STEPA_WHITE_PIECE = 'https://avatanplus.com/files/resources/original/5f394193cd6b2173f7a82981.png';
 
-stepaContainer.addEventListener('click', () => {
+// ОТКРЫТИЕ МОДАЛКИ
+stepaContainer.addEventListener('click', function(e) {
+    e.stopPropagation();
     stepaModal.classList.toggle('open');
     if (stepaModal.classList.contains('open')) {
         stepaResetAll();
     }
 });
 
-stepaModalClose.addEventListener('click', () => {
+stepaModalClose.addEventListener('click', function() {
     stepaModal.classList.remove('open');
 });
 
-document.addEventListener('click', (e) => {
+// ЗАКРЫТИЕ ПРИ КЛИКЕ ВНЕ МОДАЛКИ
+document.addEventListener('click', function(e) {
     if (!stepaModal.contains(e.target) && !stepaContainer.contains(e.target)) {
         stepaModal.classList.remove('open');
     }
@@ -1141,10 +1144,10 @@ function stepaUpdateColors() {
 }
 
 // RPS
-document.querySelectorAll('.stepa-rps-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+document.querySelectorAll('.stepa-rps-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
         const moves = ['камень','ножницы','бумага'];
-        const player = btn.dataset.move;
+        const player = this.dataset.move;
         const bot = moves[Math.floor(Math.random()*3)];
         const playerName = player === 'rock' ? 'камень' : player === 'scissors' ? 'ножницы' : 'бумага';
         stepaBotSay.textContent = 'Степаша: я выбрал ' + bot;
@@ -1209,10 +1212,10 @@ function stepaFindBestMove() {
 function stepaRenderTtt() {
     const board = document.getElementById('stepaBoard');
     board.innerHTML = '';
-    stepaBoard.forEach((cell, i) => {
+    stepaBoard.forEach(function(cell, i) {
         const btn = document.createElement('button');
         btn.textContent = cell;
-        btn.onclick = () => stepaTttMove(i);
+        btn.onclick = function() { stepaTttMove(i); };
         board.appendChild(btn);
     });
 }
@@ -1235,7 +1238,7 @@ function stepaTttMove(i) {
         stepaBotSay.textContent = 'Степаша: ничья';
         return;
     }
-    setTimeout(() => {
+    setTimeout(function() {
         if (!stepaActive) return;
         const botMove = stepaFindBestMove();
         if (botMove >= 0) {
@@ -1271,7 +1274,7 @@ function stepaCreatePos() {
     return pos;
 }
 
-function stepaClone(pos) { return pos.map(row => [...row]); }
+function stepaClone(pos) { return pos.map(function(row) { return row.slice(); }); }
 
 function stepaGetCaptures(pos, row, col) {
     const piece = pos[row][col];
@@ -1281,8 +1284,19 @@ function stepaGetCaptures(pos, row, col) {
     const caps = [];
     const dirs = isKing ? [[-1,-1],[-1,1],[1,-1],[1,1]] : [[isWhite?-1:1,-1],[isWhite?-1:1,1]];
     for (const [dr,dc] of dirs) {
-        if (!isKing) { const r=row+dr,c=col+dc; if (r>=0&&r<8&&c>=0&&c<8&&pos[r][c]) { const tw=pos[r][c]==='w'||pos[r][c]==='W'; if(isWhite!==tw){const r2=r+dr,c2=c+dc;if(r2>=0&&r2<8&&c2>=0&&c2<8&&!pos[r2][c2]) caps.push({row:r2,col:c2,captures:[{row:r,col:c}]});} } }
-        else for (let i=1; i<8; i++) { const r=row+dr*i,c=col+dc*i; if(r<0||r>=8||c<0||c>=8) break; if(pos[r][c]){const tw=pos[r][c]==='w'||pos[r][c]==='W'; if(isWhite!==tw){const r2=r+dr,c2=c+dc;if(r2>=0&&r2<8&&c2>=0&&c2<8&&!pos[r2][c2]) caps.push({row:r2,col:c2,captures:[{row:r,col:c}]});} break; } }
+        if (!isKing) {
+            const r=row+dr,c=col+dc;
+            if (r>=0&&r<8&&c>=0&&c<8&&pos[r][c]) {
+                const tw=pos[r][c]==='w'||pos[r][c]==='W';
+                if(isWhite!==tw){const r2=r+dr,c2=c+dc;if(r2>=0&&r2<8&&c2>=0&&c2<8&&!pos[r2][c2]) caps.push({row:r2,col:c2,captures:[{row:r,col:c}]});}
+            }
+        } else {
+            for (let i=1; i<8; i++) {
+                const r=row+dr*i,c=col+dc*i;
+                if(r<0||r>=8||c<0||c>=8) break;
+                if(pos[r][c]){const tw=pos[r][c]==='w'||pos[r][c]==='W'; if(isWhite!==tw){const r2=r+dr,c2=c+dc;if(r2>=0&&r2<8&&c2>=0&&c2<8&&!pos[r2][c2]) caps.push({row:r2,col:c2,captures:[{row:r,col:c}]});} break; }
+            }
+        }
     }
     return caps;
 }
@@ -1297,8 +1311,17 @@ function stepaGetMoves(pos, row, col) {
     const moves = [];
     const dirs = isKing ? [[-1,-1],[-1,1],[1,-1],[1,1]] : [[isWhite?-1:1,-1],[isWhite?-1:1,1]];
     for (const [dr,dc] of dirs) {
-        if (!isKing) { const r=row+dr,c=col+dc; if(r>=0&&r<8&&c>=0&&c<8&&!pos[r][c]) moves.push({row:r,col:c,captures:[]}); }
-        else for (let i=1; i<8; i++) { const r=row+dr*i,c=col+dc*i; if(r<0||r>=8||c<0||c>=8) break; if(!pos[r][c]) moves.push({row:r,col:c,captures:[]}); else break; }
+        if (!isKing) {
+            const r=row+dr,c=col+dc;
+            if(r>=0&&r<8&&c>=0&&c<8&&!pos[r][c]) moves.push({row:r,col:c,captures:[]});
+        } else {
+            for (let i=1; i<8; i++) {
+                const r=row+dr*i,c=col+dc*i;
+                if(r<0||r>=8||c<0||c>=8) break;
+                if(!pos[r][c]) moves.push({row:r,col:c,captures:[]});
+                else break;
+            }
+        }
     }
     return moves;
 }
@@ -1311,7 +1334,7 @@ function stepaAllMoves(pos, isWhite) {
         const m = stepaGetMoves(pos, r, c);
         for (const mv of m) { if (mv.captures.length>0) hasCaps = true; all.push({fromRow:r,fromCol:c,toRow:mv.row,toCol:mv.col,captures:mv.captures}); }
     }
-    if (hasCaps) return all.filter(m => m.captures.length>0);
+    if (hasCaps) return all.filter(function(m) { return m.captures.length > 0; });
     return all;
 }
 
@@ -1320,7 +1343,7 @@ function stepaMakeMove(pos, move) {
     const piece = np[move.fromRow][move.fromCol];
     np[move.toRow][move.toCol] = piece;
     np[move.fromRow][move.fromCol] = '';
-    move.captures.forEach(cap => np[cap.row][cap.col] = '');
+    move.captures.forEach(function(cap) { np[cap.row][cap.col] = ''; });
     if (piece==='w' && move.toRow===0) np[move.toRow][move.toCol] = 'W';
     if (piece==='b' && move.toRow===7) np[move.toRow][move.toCol] = 'B';
     return np;
@@ -1403,9 +1426,9 @@ function stepaRenderCheckers() {
             btn.appendChild(img);
             if (p === 'W' || p === 'B') { const l=document.createElement('span'); l.textContent='Д'; l.style.position='absolute'; l.style.fontSize='0.5rem'; l.style.color=p==='W'?'#000':'#fff'; l.style.fontWeight='bold'; l.style.pointerEvents='none'; btn.appendChild(l); }
         }
-        if (stepaChain.length>0) { const lp=stepaChain[stepaChain.length-1]; if(stepaGetCaptures(stepaPos,lp.row,lp.col).find(m=>m.row===r&&m.col===c)) btn.classList.add('capture-hint'); }
+        if (stepaChain.length>0) { const lp=stepaChain[stepaChain.length-1]; if(stepaGetCaptures(stepaPos,lp.row,lp.col).find(function(m){return m.row===r&&m.col===c;})) btn.classList.add('capture-hint'); }
         if (stepaSelected && stepaSelected.row===r && stepaSelected.col===c) btn.classList.add('selected');
-        btn.onclick = () => stepaCheckersClick(r,c);
+        btn.onclick = function() { stepaCheckersClick(r,c); };
         board.appendChild(btn);
     }
 }
@@ -1416,13 +1439,13 @@ function stepaCheckersClick(row, col) {
     if (stepaChain.length>0) {
         const lp = stepaChain[stepaChain.length-1];
         const caps = stepaGetCaptures(stepaPos, lp.row, lp.col);
-        const valid = caps.find(m => m.row===row && m.col===col);
+        const valid = caps.find(function(m) { return m.row===row && m.col===col; });
         if (valid) {
             stepaPos = stepaMakeMove(stepaPos, {fromRow:lp.row,fromCol:lp.col,toRow:row,toCol:col,captures:valid.captures||[]});
             stepaChain.push({row,col});
             if (stepaHasMoreCaps(stepaPos, row, col)) {
                 clearTimeout(stepaChainTimer);
-                stepaChainTimer = setTimeout(() => { stepaChain=[]; stepaTurn=stepaPlayerColor==='white'?'black':'white'; stepaRenderCheckers(); if(stepaTurn!==stepaPlayerColor) setTimeout(stepaBotCheckers,200); }, 4000);
+                stepaChainTimer = setTimeout(function() { stepaChain=[]; stepaTurn=stepaPlayerColor==='white'?'black':'white'; stepaRenderCheckers(); if(stepaTurn!==stepaPlayerColor) setTimeout(stepaBotCheckers,200); }, 4000);
                 stepaSelected = null; stepaRenderCheckers();
             } else { clearTimeout(stepaChainTimer); stepaChain=[]; stepaTurn=stepaBotColor; stepaSelected=null; stepaRenderCheckers(); if(stepaTurn!==stepaPlayerColor) setTimeout(stepaBotCheckers,200); }
         }
@@ -1432,13 +1455,13 @@ function stepaCheckersClick(row, col) {
         const p = stepaPos[stepaSelected.row][stepaSelected.col];
         if (p && (p==='w'||p==='W') === isPlayerWhite) {
             const moves = stepaGetMoves(stepaPos, stepaSelected.row, stepaSelected.col);
-            const valid = moves.find(m => m.row===row && m.col===col);
+            const valid = moves.find(function(m) { return m.row===row && m.col===col; });
             if (valid) {
                 stepaPos = stepaMakeMove(stepaPos, {fromRow:stepaSelected.row,fromCol:stepaSelected.col,toRow:row,toCol:col,captures:valid.captures||[]});
                 if (valid.captures && valid.captures.length>0 && stepaHasMoreCaps(stepaPos,row,col)) {
                     stepaChain=[{row,col}];
                     clearTimeout(stepaChainTimer);
-                    stepaChainTimer = setTimeout(() => { stepaChain=[]; stepaTurn=stepaPlayerColor==='white'?'black':'white'; stepaRenderCheckers(); if(stepaTurn!==stepaPlayerColor) setTimeout(stepaBotCheckers,200); }, 4000);
+                    stepaChainTimer = setTimeout(function() { stepaChain=[]; stepaTurn=stepaPlayerColor==='white'?'black':'white'; stepaRenderCheckers(); if(stepaTurn!==stepaPlayerColor) setTimeout(stepaBotCheckers,200); }, 4000);
                     stepaSelected=null; stepaRenderCheckers(); return;
                 }
                 stepaSelected=null; stepaTurn=stepaBotColor; stepaRenderCheckers(); if(stepaTurn!==stepaPlayerColor) setTimeout(stepaBotCheckers,200);
@@ -1453,9 +1476,9 @@ function stepaCheckersClick(row, col) {
 }
 
 // Переключение игр
-document.querySelectorAll('.stepa-game-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.stepa-game-btn').forEach(b => b.classList.remove('active'));
+document.querySelectorAll('.stepa-game-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.stepa-game-btn').forEach(function(b) { b.classList.remove('active'); });
         btn.classList.add('active');
         stepaGame = btn.dataset.stepaGame;
         document.getElementById('stepaRps').style.display = stepaGame === 'rps' ? 'block' : 'none';
@@ -1467,7 +1490,7 @@ document.querySelectorAll('.stepa-game-btn').forEach(btn => {
 
 stepaReset.addEventListener('click', stepaResetAll);
 document.getElementById('stepaColor').addEventListener('change', stepaResetAll);
-document.getElementById('stepaDifficulty').addEventListener('change', () => { stepaDifficulty = document.getElementById('stepaDifficulty').value; stepaResetAll(); });
+document.getElementById('stepaDifficulty').addEventListener('change', function() { stepaDifficulty = this.value; stepaResetAll(); });
 
 function stepaResetAll() {
     clearTimeout(stepaChainTimer);

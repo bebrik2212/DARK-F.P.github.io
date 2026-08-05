@@ -24,6 +24,8 @@
 
         <div class="tabs" role="tablist">
             <button id="tabFeed" class="active" type="button">ПОСТЫ</button>
+            <button id="tabSearch" type="button">🔍 ПОРТЫ</button>
+            <button id="tabFriends" type="button">👥 ДРУЗЬЯ</button>
             <button id="tabCreate" type="button">СДЕЛАТЬ ПОСТ</button>
             <button id="tabProfile" type="button">ТВОЙ ПРОФИЛЬ</button>
         </div>
@@ -33,6 +35,27 @@
         <div id="feedSection" class="section active">
             <div class="posts-list" id="postsListFeed">
                 <div class="empty-posts">ЗАГРУЗКА...</div>
+            </div>
+        </div>
+
+        <div id="searchSection" class="section">
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 ПОИСК ПОРТОВ..." maxlength="50">
+                <div class="search-results" id="searchResults">
+                    <div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="friendsSection" class="section">
+            <div class="friends-container">
+                <div class="friends-header">
+                    <h3>👥 ДРУЗЬЯ</h3>
+                    <button class="btn add-friend-btn" id="addFriendBtn">➕ ДОБАВИТЬ</button>
+                </div>
+                <div class="friends-list" id="friendsList">
+                    <div class="empty-posts">У ВАС НЕТ ДРУЗЕЙ</div>
+                </div>
             </div>
         </div>
 
@@ -61,10 +84,23 @@
         </div>
     </div>
 
-    <!-- FIREBASE SDK -->
+    <!-- Модальное окно для чата -->
+    <div class="chat-modal" id="chatModal">
+        <div class="chat-header">
+            <span id="chatFriendName">ДРУГ</span>
+            <button class="close-chat" id="closeChatBtn">✕</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="empty-posts">НАЧНИТЕ ОБЩЕНИЕ</div>
+        </div>
+        <div class="chat-input-row">
+            <input type="text" id="chatInput" placeholder="ВВЕДИТЕ СООБЩЕНИЕ..." maxlength="1000">
+            <button class="btn" id="sendChatBtn">ОТПРАВИТЬ</button>
+        </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
     <script src="script.js"></script>
 </body>
 </html>

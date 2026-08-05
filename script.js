@@ -1,3 +1,6 @@
+const firebaseConfig = { ... };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 const firebaseConfig = {
     apiKey: "AIzaSyBa9NWi5FpmAx6ExJh1fJ3b1ipUEEBRxU",
     authDomain: "dark-fortport.firebaseapp.com",

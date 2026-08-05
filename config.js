@@ -1,4 +1,11 @@
-// config.js - Firebase конфигурация
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
     apiKey: "AIzaSyBa9NWi5FpmAx6ExJh1fJ3b1ipUEEBRxU",
     authDomain: "dark-fortport.firebaseapp.com",
@@ -8,11 +15,6 @@ const firebaseConfig = {
     appId: "1:3814531503:web:a8200e1f337935a3530f5a"
 };
 
-// Инициализация Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-// Включаем оффлайн режим
-db.enablePersistence()
-    .then(() => console.log('🔥 Offline mode enabled'))
-    .catch((err) => console.warn('Offline mode error:', err));
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);

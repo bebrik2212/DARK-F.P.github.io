@@ -103,60 +103,63 @@
         </div>
     </div>
 
-    <!-- СТЕПАША В УГЛУ -->
-<div class="stepa-container" id="stepaContainer">
+    <!-- СТЕПАША -->
     <img class="stepa-gif" id="stepaGif" src="https://theblueprint.ru/upload/10286m/vms/eab27402cc3bb03d766824c3b6cdbd90.gif" alt="Степаша">
-    <span class="stepa-label">бурмалда</span>
-</div>
 
-<!-- МОДАЛКА С ИГРАМИ ОТ СТЕПАШИ -->
-<div class="stepa-modal" id="stepaModal">
-    <div class="stepa-modal-header">
-        <span>СТЕПАША</span>
-        <button class="stepa-modal-close" id="stepaModalClose">✕</button>
-    </div>
-    <div class="stepa-modal-body">
-        <div class="stepa-phrase" id="stepaPhrase">бурмалда</div>
-        
-        <div class="stepa-game-select">
-            <button class="stepa-game-btn active" data-stepa-game="rps">КАМЕНЬ НОЖНИЦЫ</button>
-            <button class="stepa-game-btn" data-stepa-game="ttt">КРЕСТИКИ НОЛИКИ</button>
-            <button class="stepa-game-btn" data-stepa-game="checkers">ШАШКИ</button>
+    <!-- МОДАЛКА С ИГРАМИ -->
+    <div class="stepa-modal" id="stepaModal">
+        <div class="stepa-modal-header">
+            <span>СТЕПАША</span>
+            <button class="stepa-modal-close" id="stepaModalClose">✕</button>
         </div>
-
-        <div id="stepaRps" class="stepa-game-area">
-            <div class="stepa-btns">
-                <button class="stepa-rps-btn" data-move="rock"><img src="https://img.magnific.com/premium-photo/natural-gray-rock-isolated-white_53876-1429553.jpg?semt=ais_test_b&w=740&q=80" alt="камень"></button>
-                <button class="stepa-rps-btn" data-move="scissors"><img src="https://pngicon.ru/file/uploads/nozhnicy.png" alt="ножницы"></button>
-                <button class="stepa-rps-btn" data-move="paper"><img src="https://bakerstore.ru/image/cache/catalog/PH/3876221-600x600.png" alt="бумага"></button>
+        <div class="stepa-modal-body">
+            <div class="stepa-phrase" id="stepaPhrase">бурмалда</div>
+            
+            <div class="stepa-game-select">
+                <button class="stepa-game-btn active" data-stepa-game="rps">КАМЕНЬ НОЖНИЦЫ</button>
+                <button class="stepa-game-btn" data-stepa-game="ttt">КРЕСТИКИ НОЛИКИ</button>
+                <button class="stepa-game-btn" data-stepa-game="checkers">ШАШКИ</button>
             </div>
-        </div>
 
-        <div id="stepaTtt" class="stepa-game-area" style="display:none;">
-            <div class="stepa-ttt" id="stepaBoard"></div>
-        </div>
-
-        <div id="stepaCheckers" class="stepa-game-area" style="display:none;">
-            <div class="stepa-checkers-settings">
-                <label>сложность:</label>
-                <select id="stepaDifficulty">
-                    <option value="easy">легко</option>
-                    <option value="medium" selected>средне</option>
-                    <option value="hard">сложно</option>
-                </select>
-                <label>цвет:</label>
-                <select id="stepaColor">
-                    <option value="white">белые</option>
-                    <option value="black">чёрные</option>
-                </select>
+            <div id="stepaRps" class="stepa-game-area">
+                <div class="stepa-btns">
+                    <button class="stepa-rps-btn" data-move="rock"><img src="https://img.magnific.com/premium-photo/natural-gray-rock-isolated-white_53876-1429553.jpg?semt=ais_test_b&w=740&q=80" alt="камень"></button>
+                    <button class="stepa-rps-btn" data-move="scissors"><img src="https://pngicon.ru/file/uploads/nozhnicy.png" alt="ножницы"></button>
+                    <button class="stepa-rps-btn" data-move="paper"><img src="https://bakerstore.ru/image/cache/catalog/PH/3876221-600x600.png" alt="бумага"></button>
+                </div>
             </div>
-            <div class="stepa-checkers-board" id="stepaCheckersBoard"></div>
-        </div>
 
-        <div class="stepa-status">
-            <div class="stepa-bot-say" id="stepaBotSay">Степаша: жду</div>
-            <div class="stepa-result" id="stepaResult">сделай выбор</div>
+            <div id="stepaTtt" class="stepa-game-area" style="display:none;">
+                <div class="stepa-ttt" id="stepaBoard"></div>
+            </div>
+
+            <div id="stepaCheckers" class="stepa-game-area" style="display:none;">
+                <div class="stepa-checkers-settings">
+                    <label>сложность:</label>
+                    <select id="stepaDifficulty">
+                        <option value="easy">легко</option>
+                        <option value="medium" selected>средне</option>
+                        <option value="hard">сложно</option>
+                    </select>
+                    <label>цвет:</label>
+                    <select id="stepaColor">
+                        <option value="white">белые</option>
+                        <option value="black">чёрные</option>
+                    </select>
+                </div>
+                <div class="stepa-checkers-board" id="stepaCheckersBoard"></div>
+            </div>
+
+            <div class="stepa-status">
+                <div class="stepa-bot-say" id="stepaBotSay">Степаша: жду</div>
+                <div class="stepa-result" id="stepaResult">сделай выбор</div>
+            </div>
+            <button class="stepa-reset" id="stepaReset">ЗАНОВО</button>
         </div>
-        <button class="stepa-reset" id="stepaReset">ЗАНОВО</button>
     </div>
-</div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

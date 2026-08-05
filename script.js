@@ -1530,3 +1530,9 @@ function stepaResetAll() {
 }
 
 stepaResetAll();
+// НЕ ЗАКРЫВАТЬ МОДАЛКУ ПРИ КЛИКЕ ВНУТРИ НЕЁ
+document.addEventListener('click', function(e) {
+    if (!stepaModal.contains(e.target) && !stepaWrapper.contains(e.target)) {
+        stepaModal.classList.remove('open');
+    }
+});

@@ -1,62 +1,25 @@
-// ============================================================
-// DARK FORT - FIREBASE (ПОЛНАЯ ВЕРСИЯ)
-// ============================================================
-
-// ============================================================
-// 🔥 КОНФИГ FIREBASE (ТВОЙ)
-// ============================================================
-
-const firebaseConfig = {
-    apiKey: "AIzaSyBa9NWi5FpmAx6ExJh1fJ3b1ipUEEBRxU",
-    authDomain: "dark-fortport.firebaseapp.com",
-    projectId: "dark-fortport",
-    storageBucket: "dark-fortport.firebasestorage.app",
-    messagingSenderId: "3814531503",
-    appId: "1:3814531503:web:a8200e1f337935a3530f5a"
-};
-
-// ============================================================
-// 👑 АДМИНИСТРАТОРЫ
-// ============================================================
-
 const ADMIN_NICKNAMES = ['amamammellstroy67'];
-
-// ============================================================
-// ИНИЦИАЛИЗАЦИЯ FIREBASE
-// ============================================================
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-db.enablePersistence()
-    .then(() => console.log('🔥 Offline enabled'))
-    .catch(() => console.warn('Offline not available'));
-
-// ============================================================
-// КОНСТАНТЫ
-// ============================================================
-
 const DEFAULT_AVATAR = 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg';
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
-// --- ID ПОЛЬЗОВАТЕЛЯ ---
 let profileId = localStorage.getItem('df_profile_id');
 if (!profileId) {
     profileId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     localStorage.setItem('df_profile_id', profileId);
 }
 
-// --- ГЛОБАЛЬНЫЕ ---
 let currentProfile = null;
 let allPosts = [];
+let allUsers = [];
 let pendingMedia = [];
 let saveTimer = 0;
 let notifOpen = false;
 const openComments = new Set();
 let unsubscribePosts = null;
+let chatWith = null;
+let unsubscribeChat = null;
 
-// --- DOM ---
 const nicknameInput = document.getElementById('nicknameInput');
 const profileAvatarEl = document.getElementById('profileAvatar');
 const profileBigAvatarEl = document.getElementById('profileBigAvatar');
@@ -73,10 +36,16 @@ const publishBtnEl = document.getElementById('publishBtn');
 const uploadStatusEl = document.getElementById('uploadStatus');
 const postsListFeedEl = document.getElementById('postsListFeed');
 const postsListProfileEl = document.getElementById('postsListProfile');
-
-// ============================================================
-// КЭШ
-// ============================================================
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+const friendsList = document.getElementById('friendsList');
+const addFriendBtn = document.getElementById('addFriendBtn');
+const chatModal = document.getElementById('chatModal');
+const chatFriendName = document.getElementById('chatFriendName');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const sendChatBtn = document.getElementById('sendChatBtn');
+const closeChatBtn = document.getElementById('closeChatBtn');
 
 function getCachedData() {
     try {
@@ -91,10 +60,6 @@ function setCachedData(data) {
         localStorage.setItem('df_cache', JSON.stringify(data));
     } catch (e) {}
 }
-
-// ============================================================
-// ПРОФИЛЬ
-// ============================================================
 
 async function getOrCreateProfile() {
     try {
@@ -118,7 +83,9 @@ async function getOrCreateProfile() {
     const newProfile = {
         nickname: '',
         avatarData: DEFAULT_AVATAR,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        friends: [],
+        online: true
     };
 
     try {
@@ -172,9 +139,14 @@ async function saveProfile(nickname, avatarData) {
     }
 }
 
-// ============================================================
-// ПОСТЫ
-// ============================================================
+async function updateOnlineStatus(online) {
+    if (!currentProfile) return;
+    try {
+        await db.collection('profiles').doc(profileId).update({ online });
+    } catch (error) {
+        console.warn('Ошибка обновления статуса:', error);
+    }
+}
 
 function subscribeToPosts() {
     if (unsubscribePosts) {
@@ -256,10 +228,6 @@ async function createPost(text, media) {
         return false;
     }
 }
-
-// ============================================================
-// 🔥 УДАЛЕНИЕ ПОСТА (АДМИН МОЖЕТ ВСЁ)
-// ============================================================
 
 async function deletePost(postId) {
     try {
@@ -353,10 +321,6 @@ async function addComment(postId, text) {
     }
 }
 
-// ============================================================
-// UI
-// ============================================================
-
 function updateProfileUI() {
     if (!currentProfile) return;
 
@@ -399,10 +363,6 @@ function renderAllPosts() {
         postsListProfileEl.innerHTML = '<div class="empty-posts">У ВАС НЕТ ПОСТОВ</div>';
     }
 }
-
-// ============================================================
-// 🔥 РЕНДЕР ПОСТА С АДМИН-КНОПКОЙ
-// ============================================================
 
 function renderPostCard(post) {
     const isMine = post.authorId === profileId;
@@ -483,10 +443,6 @@ function renderNotifications() {
     notificationPanelEl.innerHTML = '<div class="notif-item">НЕТ УВЕДОМЛЕНИЙ</div>';
 }
 
-// ============================================================
-// ВСПОМОГАТЕЛЬНЫЕ
-// ============================================================
-
 function escapeHtml(v) {
     const d = document.createElement('div');
     d.textContent = v == null ? '' : String(v);
@@ -513,9 +469,243 @@ function showToast(msg, err = false) {
     setTimeout(() => t.remove(), 3000);
 }
 
-// ============================================================
-// СОБЫТИЯ
-// ============================================================
+async function searchUsers(query) {
+    if (!query.trim()) {
+        searchResults.innerHTML = '<div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>';
+        return;
+    }
+
+    try {
+        const snapshot = await db.collection('profiles')
+            .where('nickname', '>=', query)
+            .where('nickname', '<=', query + '\uf8ff')
+            .limit(20)
+            .get();
+
+        if (snapshot.empty) {
+            searchResults.innerHTML = '<div class="empty-posts">ПОРТЫ НЕ НАЙДЕНЫ</div>';
+            return;
+        }
+
+        let html = '';
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const isFriend = currentProfile?.friends?.includes(doc.id) || false;
+            const isSelf = doc.id === profileId;
+            
+            html += `
+                <div class="search-result-item" data-id="${doc.id}">
+                    <img class="search-result-avatar" src="${data.avatarData || DEFAULT_AVATAR}">
+                    <div class="search-result-info">
+                        <div class="search-result-nick">${escapeHtml(data.nickname || 'АНОНИМ')}</div>
+                        <div class="search-result-status ${data.online ? 'online' : ''}">
+                            ${data.online ? '🟢 В СЕТИ' : '⚫ ОФФЛАЙН'}
+                            ${isSelf ? ' (ЭТО ВЫ)' : ''}
+                            ${isFriend ? ' 🤝 ДРУГ' : ''}
+                        </div>
+                    </div>
+                    ${!isSelf ? `
+                        <button class="btn" data-add-friend="${doc.id}" style="font-size:9px;padding:2px 8px;">
+                            ${isFriend ? '❌ УДАЛИТЬ' : '➕ ДОБАВИТЬ'}
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        });
+
+        searchResults.innerHTML = html;
+    } catch (error) {
+        console.error('Ошибка поиска:', error);
+        searchResults.innerHTML = '<div class="empty-posts">ОШИБКА ПОИСКА</div>';
+    }
+}
+
+async function loadFriends() {
+    if (!currentProfile) return;
+
+    const friendIds = currentProfile.friends || [];
+    if (!friendIds.length) {
+        friendsList.innerHTML = '<div class="empty-posts">У ВАС НЕТ ДРУЗЕЙ</div>';
+        return;
+    }
+
+    try {
+        let html = '';
+        for (const friendId of friendIds) {
+            const doc = await db.collection('profiles').doc(friendId).get();
+            if (doc.exists) {
+                const data = doc.data();
+                html += `
+                    <div class="friend-item" data-id="${friendId}">
+                        <img class="friend-avatar" src="${data.avatarData || DEFAULT_AVATAR}">
+                        <div class="friend-info">
+                            <div class="friend-nick">${escapeHtml(data.nickname || 'АНОНИМ')}</div>
+                            <div class="friend-status ${data.online ? 'online' : ''}">
+                                ${data.online ? '🟢 В СЕТИ' : '⚫ ОФФЛАЙН'}
+                            </div>
+                        </div>
+                        <div class="friend-actions">
+                            <button class="chat-friend" data-chat="${friendId}">💬</button>
+                            <button class="remove-friend" data-remove-friend="${friendId}">✕</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        friendsList.innerHTML = html || '<div class="empty-posts">ДРУЗЬЯ НЕ НАЙДЕНЫ</div>';
+    } catch (error) {
+        console.error('Ошибка загрузки друзей:', error);
+        friendsList.innerHTML = '<div class="empty-posts">ОШИБКА ЗАГРУЗКИ</div>';
+    }
+}
+
+async function addFriend(userId) {
+    if (!currentProfile) return false;
+    if (userId === profileId) {
+        showToast('НЕЛЬЗЯ ДОБАВИТЬ СЕБЯ', true);
+        return false;
+    }
+
+    const friends = currentProfile.friends || [];
+    if (friends.includes(userId)) {
+        showToast('УЖЕ В ДРУЗЬЯХ', true);
+        return false;
+    }
+
+    friends.push(userId);
+    currentProfile.friends = friends;
+    
+    try {
+        await db.collection('profiles').doc(profileId).update({ friends });
+        setCachedData({ profile: currentProfile });
+        showToast('✅ ДРУГ ДОБАВЛЕН');
+        loadFriends();
+        return true;
+    } catch (error) {
+        console.error('Ошибка добавления друга:', error);
+        showToast('ОШИБКА ДОБАВЛЕНИЯ', true);
+        return false;
+    }
+}
+
+async function removeFriend(userId) {
+    if (!currentProfile) return false;
+
+    const friends = currentProfile.friends || [];
+    const index = friends.indexOf(userId);
+    if (index === -1) return false;
+
+    friends.splice(index, 1);
+    currentProfile.friends = friends;
+
+    try {
+        await db.collection('profiles').doc(profileId).update({ friends });
+        setCachedData({ profile: currentProfile });
+        showToast('ДРУГ УДАЛЁН');
+        loadFriends();
+        return true;
+    } catch (error) {
+        console.error('Ошибка удаления друга:', error);
+        showToast('ОШИБКА УДАЛЕНИЯ', true);
+        return false;
+    }
+}
+
+function openChat(userId, userNickname) {
+    chatWith = userId;
+    chatFriendName.textContent = userNickname || 'ДРУГ';
+    chatModal.classList.add('open');
+    loadChatMessages(userId);
+}
+
+function closeChat() {
+    chatModal.classList.remove('open');
+    if (unsubscribeChat) {
+        unsubscribeChat();
+        unsubscribeChat = null;
+    }
+    chatWith = null;
+}
+
+function loadChatMessages(userId) {
+    if (unsubscribeChat) {
+        unsubscribeChat();
+        unsubscribeChat = null;
+    }
+
+    chatMessages.innerHTML = '<div class="empty-posts">ЗАГРУЗКА СООБЩЕНИЙ...</div>';
+
+    const chatId = [profileId, userId].sort().join('_');
+
+    unsubscribeChat = db.collection('chats').doc(chatId)
+        .onSnapshot((doc) => {
+            if (!doc.exists) {
+                chatMessages.innerHTML = '<div class="empty-posts">НАЧНИТЕ ОБЩЕНИЕ</div>';
+                return;
+            }
+
+            const data = doc.data();
+            const messages = data.messages || [];
+
+            if (!messages.length) {
+                chatMessages.innerHTML = '<div class="empty-posts">НАЧНИТЕ ОБЩЕНИЕ</div>';
+                return;
+            }
+
+            let html = '';
+            messages.forEach(msg => {
+                const isMine = msg.authorId === profileId;
+                html += `
+                    <div class="chat-message ${isMine ? 'mine' : ''}">
+                        <div class="msg-nick">${isMine ? 'ВЫ' : escapeHtml(msg.authorName || 'ДРУГ')}</div>
+                        <div class="msg-text">${escapeHtml(msg.text)}</div>
+                        <span class="msg-time">${formatDate(new Date(msg.createdAt))}</span>
+                    </div>
+                `;
+            });
+
+            chatMessages.innerHTML = html;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, (error) => {
+            console.error('Ошибка загрузки чата:', error);
+            chatMessages.innerHTML = '<div class="empty-posts">ОШИБКА ЗАГРУЗКИ</div>';
+        });
+}
+
+async function sendMessage(text) {
+    if (!chatWith) {
+        showToast('ЧАТ НЕ ОТКРЫТ', true);
+        return;
+    }
+
+    if (!text.trim()) {
+        showToast('ВВЕДИТЕ СООБЩЕНИЕ', true);
+        return;
+    }
+
+    try {
+        const chatId = [profileId, chatWith].sort().join('_');
+        const chatRef = db.collection('chats').doc(chatId);
+
+        const doc = await chatRef.get();
+        const messages = doc.exists ? (doc.data().messages || []) : [];
+
+        const authorName = currentProfile?.nickname || 'АНОНИМ';
+        messages.push({
+            authorId: profileId,
+            authorName: authorName,
+            text: text.trim(),
+            createdAt: new Date().toISOString()
+        });
+
+        await chatRef.set({ messages }, { merge: true });
+        chatInput.value = '';
+        showToast('✅ СООБЩЕНИЕ ОТПРАВЛЕНО');
+    } catch (error) {
+        console.error('Ошибка отправки:', error);
+        showToast('ОШИБКА ОТПРАВКИ', true);
+    }
+}
 
 nicknameInput.addEventListener('input', function() {
     const nick = this.value.trim();
@@ -561,7 +751,6 @@ avatarUploadEl.addEventListener('change', function() {
     reader.readAsDataURL(file);
 });
 
-// КНОПКА ПРИКРЕПЛЕНИЯ
 document.getElementById('attachBtn').addEventListener('click', () => mediaUploadEl.click());
 
 mediaUploadEl.addEventListener('change', function() {
@@ -661,10 +850,6 @@ publishBtnEl.addEventListener('click', async function() {
     }
 });
 
-// ============================================================
-// КЛИКИ
-// ============================================================
-
 document.addEventListener('click', function(e) {
     const voteBtn = e.target.closest('[data-vote]');
     if (voteBtn) {
@@ -675,6 +860,7 @@ document.addEventListener('click', function(e) {
         votePost(voteBtn.dataset.id, Number(voteBtn.dataset.vote));
         return;
     }
+
     const toggleBtn = e.target.closest('[data-toggle]');
     if (toggleBtn) {
         const id = toggleBtn.dataset.toggle;
@@ -685,6 +871,7 @@ document.addEventListener('click', function(e) {
         open ? openComments.add(id) : openComments.delete(id);
         return;
     }
+
     const commentBtn = e.target.closest('[data-comment]');
     if (commentBtn) {
         if (!currentProfile?.nickname) {
@@ -700,19 +887,57 @@ document.addEventListener('click', function(e) {
         input.value = '';
         return;
     }
+
     const delBtn = e.target.closest('[data-delete]');
     if (delBtn) {
         if (!confirm('УДАЛИТЬ ПОСТ?')) return;
         deletePost(delBtn.dataset.delete);
         return;
     }
+
+    const addFriendBtn = e.target.closest('[data-add-friend]');
+    if (addFriendBtn) {
+        const userId = addFriendBtn.dataset.addFriend;
+        const isFriend = currentProfile?.friends?.includes(userId);
+        if (isFriend) {
+            removeFriend(userId);
+        } else {
+            addFriend(userId);
+        }
+        searchUsers(searchInput.value);
+        return;
+    }
+
+    const removeFriendBtn = e.target.closest('[data-remove-friend]');
+    if (removeFriendBtn) {
+        if (!confirm('УДАЛИТЬ ИЗ ДРУЗЕЙ?')) return;
+        removeFriend(removeFriendBtn.dataset.removeFriend);
+        return;
+    }
+
+    const chatBtn = e.target.closest('[data-chat]');
+    if (chatBtn) {
+        const userId = chatBtn.dataset.chat;
+        const friendItem = chatBtn.closest('.friend-item');
+        const nickElement = friendItem?.querySelector('.friend-nick');
+        const nick = nickElement ? nickElement.textContent : 'ДРУГ';
+        openChat(userId, nick);
+        return;
+    }
 });
 
 document.addEventListener('keydown', function(e) {
-    if (e.key !== 'Enter' || e.shiftKey || !e.target.classList.contains('comment-input')) return;
-    e.preventDefault();
-    const btn = e.target.closest('.comment-input-row')?.querySelector('[data-comment]');
-    if (btn) btn.click();
+    if (e.key === 'Enter' && e.target === chatInput) {
+        e.preventDefault();
+        sendChatBtn.click();
+    }
+});
+
+searchInput.addEventListener('input', function() {
+    clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(() => {
+        searchUsers(this.value);
+    }, 300);
 });
 
 bellBtnEl.addEventListener('click', function() {
@@ -737,15 +962,34 @@ function setActiveTab(buttonId, sectionId) {
     document.querySelectorAll('.section').forEach(section => {
         section.classList.toggle('active', section.id === sectionId);
     });
+
+    if (sectionId === 'friendsSection') {
+        loadFriends();
+    }
 }
 
 document.getElementById('tabFeed').addEventListener('click', () => setActiveTab('tabFeed', 'feedSection'));
+document.getElementById('tabSearch').addEventListener('click', () => setActiveTab('tabSearch', 'searchSection'));
+document.getElementById('tabFriends').addEventListener('click', () => setActiveTab('tabFriends', 'friendsSection'));
 document.getElementById('tabCreate').addEventListener('click', () => setActiveTab('tabCreate', 'createSection'));
 document.getElementById('tabProfile').addEventListener('click', () => setActiveTab('tabProfile', 'profileSection'));
 
-// ============================================================
-// ЗАПУСК
-// ============================================================
+addFriendBtn.addEventListener('click', function() {
+    setActiveTab('tabSearch', 'searchSection');
+    searchInput.focus();
+});
+
+sendChatBtn.addEventListener('click', () => {
+    sendMessage(chatInput.value);
+});
+
+closeChatBtn.addEventListener('click', closeChat);
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && chatModal.classList.contains('open')) {
+        closeChat();
+    }
+});
 
 async function init() {
     try {
@@ -757,10 +1001,23 @@ async function init() {
 
         await getOrCreateProfile();
         subscribeToPosts();
+        await updateOnlineStatus(true);
 
         if (!currentProfile?.nickname) {
             nicknameInput.focus();
         }
+
+        window.addEventListener('beforeunload', () => {
+            updateOnlineStatus(false);
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                updateOnlineStatus(false);
+            } else {
+                updateOnlineStatus(true);
+            }
+        });
 
         console.log('✅ DARK FORT ONLINE');
     } catch (error) {

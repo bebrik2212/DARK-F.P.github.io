@@ -1571,28 +1571,30 @@ button {
    СТЕПАША
    ============================================================ */
 
-.stepa-gif {
+#stepaWrapper {
     position: fixed;
-    bottom: 15px;
-    left: 15px;
+    bottom: 20px;
+    left: 20px;
     z-index: 999;
-    width: 60px;
-    height: 60px;
+    cursor: pointer;
+}
+
+.stepa-gif {
+    width: 80px;
+    height: 80px;
     object-fit: contain;
     image-rendering: pixelated;
-    cursor: pointer;
-    transition: all 0.2s ease;
     border: none !important;
     background: none !important;
     box-shadow: none !important;
     outline: none !important;
     border-radius: 0 !important;
+    transition: transform 0.2s ease;
 }
 .stepa-gif:hover {
-    transform: scale(1.08);
+    transform: scale(1.1);
 }
 
-/* Модалка */
 .stepa-modal {
     display: none;
     position: fixed;

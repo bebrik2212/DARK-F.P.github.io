@@ -1,6 +1,6 @@
 const ADMIN_NICKNAMES = ['amamammellstroy67'];
 const DEFAULT_AVATAR = 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg';
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // Увеличено до 50 МБ
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
 let profileId = localStorage.getItem('df_profile_id');
@@ -11,7 +11,6 @@ if (!profileId) {
 
 let currentProfile = null;
 let allPosts = [];
-let allUsers = [];
 let pendingMedia = [];
 let saveTimer = 0;
 let notifOpen = false;
@@ -164,7 +163,6 @@ function subscribeToPosts() {
         .limit(100)
         .onSnapshot(async (snapshot) => {
             const posts = [];
-            const profilesCache = {};
 
             for (const doc of snapshot.docs) {
                 const data = doc.data();
@@ -200,7 +198,7 @@ function subscribeToPosts() {
                     <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
                     <div>ОШИБКА ПОДКЛЮЧЕНИЯ</div>
                     <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
-                    <button onclick="subscribeToPosts()" style="margin-top:12px;padding:8px 20px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+                    <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
                 </div>
             `;
         });
@@ -352,7 +350,7 @@ function renderAllPosts() {
     } else {
         postsListFeedEl.innerHTML = `
             <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
-                <div style="font-size:48px;margin-bottom:12px;">🌐</div>
+                <div style="font-size:48px;margin-bottom:12px;">📡</div>
                 <div>ПОКА НЕТ ПОСТОВ</div>
                 <div style="font-size:0.85rem;color:#5a5d66;">БУДЬТЕ ПЕРВЫМ</div>
             </div>
@@ -472,7 +470,6 @@ function showToast(msg, err = false) {
     setTimeout(() => t.remove(), 3000);
 }
 
-// ===== ПОИСК =====
 async function searchUsers(query) {
     if (!query.trim()) {
         searchResults.innerHTML = '<div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>';
@@ -531,7 +528,6 @@ async function searchPosts(query) {
     }
 
     try {
-        // Ищем посты по тексту
         const snapshot = await db.collection('posts')
             .orderBy('createdAt', 'desc')
             .limit(100)
@@ -593,7 +589,6 @@ function performSearch(query) {
     }
 }
 
-// ===== ДРУЗЬЯ =====
 async function loadFriends() {
     if (!currentProfile) return;
 
@@ -685,7 +680,6 @@ async function removeFriend(userId) {
     }
 }
 
-// ===== ЧАТ =====
 function openChat(userId, userNickname) {
     chatWith = userId;
     chatFriendName.textContent = userNickname || 'ДРУГ';
@@ -782,7 +776,6 @@ async function sendMessage(text) {
     }
 }
 
-// ===== СОБЫТИЯ =====
 nicknameInput.addEventListener('input', function() {
     const nick = this.value.trim();
     profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
@@ -1155,10 +1148,10 @@ async function init() {
                 <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
                 <div>ОФФЛАЙН РЕЖИМ</div>
                 <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
-                <button onclick="subscribeToPosts()" style="margin-top:12px;padding:8px 20px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+                <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
             </div>
         `;
     }
 }
 
-init();
+document.addEventListener('DOMContentLoaded', init);

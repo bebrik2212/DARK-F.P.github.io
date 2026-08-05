@@ -1100,6 +1100,7 @@ document.addEventListener('DOMContentLoaded', init);
 // ============================================================
 
 const stepaGif = document.getElementById('stepaGif');
+const stepaWrapper = document.getElementById('stepaWrapper');
 const stepaModal = document.getElementById('stepaModal');
 const stepaModalClose = document.getElementById('stepaModalClose');
 const stepaPhrase = document.getElementById('stepaPhrase');
@@ -1123,7 +1124,7 @@ let stepaDifficulty = 'medium';
 
 const STEPA_WHITE_PIECE = 'https://avatanplus.com/files/resources/original/5f394193cd6b2173f7a82981.png';
 
-stepaGif.addEventListener('click', function(e) {
+stepaWrapper.addEventListener('click', function(e) {
     e.stopPropagation();
     stepaModal.classList.toggle('open');
     if (stepaModal.classList.contains('open')) {
@@ -1136,7 +1137,7 @@ stepaModalClose.addEventListener('click', function() {
 });
 
 document.addEventListener('click', function(e) {
-    if (!stepaModal.contains(e.target) && !stepaGif.contains(e.target)) {
+    if (!stepaModal.contains(e.target) && !stepaWrapper.contains(e.target)) {
         stepaModal.classList.remove('open');
     }
 });

@@ -24,8 +24,8 @@
 
         <div class="tabs" role="tablist">
             <button id="tabFeed" class="active" type="button">ПОСТЫ</button>
-            <button id="tabSearch" type="button">🔍 ПОРТЫ</button>
-            <button id="tabFriends" type="button">👥 ДРУЗЬЯ</button>
+            <button id="tabSearch" type="button">ПОИСК</button>
+            <button id="tabFriends" type="button">ДРУЗЬЯ</button>
             <button id="tabCreate" type="button">СДЕЛАТЬ ПОСТ</button>
             <button id="tabProfile" type="button">ТВОЙ ПРОФИЛЬ</button>
         </div>
@@ -40,7 +40,11 @@
 
         <div id="searchSection" class="section">
             <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="🔍 ПОИСК ПОРТОВ..." maxlength="50">
+                <div class="search-tabs">
+                    <button id="searchUsersTab" class="search-tab active" type="button">НАЙТИ ПОЛЬЗОВАТЕЛЯ</button>
+                    <button id="searchPostsTab" class="search-tab" type="button">НАЙТИ ПОСТ</button>
+                </div>
+                <input type="text" id="searchInput" class="search-input" placeholder="ВВЕДИТЕ ЗАПРОС..." maxlength="50">
                 <div class="search-results" id="searchResults">
                     <div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>
                 </div>
@@ -50,8 +54,8 @@
         <div id="friendsSection" class="section">
             <div class="friends-container">
                 <div class="friends-header">
-                    <h3>👥 ДРУЗЬЯ</h3>
-                    <button class="btn add-friend-btn" id="addFriendBtn">➕ ДОБАВИТЬ</button>
+                    <h3>ДРУЗЬЯ</h3>
+                    <button class="btn add-friend-btn" id="addFriendBtn">ДОБАВИТЬ</button>
                 </div>
                 <div class="friends-list" id="friendsList">
                     <div class="empty-posts">У ВАС НЕТ ДРУЗЕЙ</div>
@@ -88,7 +92,7 @@
     <div class="chat-modal" id="chatModal">
         <div class="chat-header">
             <span id="chatFriendName">ДРУГ</span>
-            <button class="close-chat" id="closeChatBtn">✕</button>
+            <button class="close-chat" id="closeChatBtn">X</button>
         </div>
         <div class="chat-messages" id="chatMessages">
             <div class="empty-posts">НАЧНИТЕ ОБЩЕНИЕ</div>

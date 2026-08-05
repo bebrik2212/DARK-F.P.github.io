@@ -1136,10 +1136,16 @@ stepaModalClose.addEventListener('click', function() {
     stepaModal.classList.remove('open');
 });
 
+// НЕ ЗАКРЫВАТЬ МОДАЛКУ ПРИ КЛИКЕ ВНУТРИ НЕЁ
 document.addEventListener('click', function(e) {
     if (!stepaModal.contains(e.target) && !stepaWrapper.contains(e.target)) {
         stepaModal.classList.remove('open');
     }
+});
+
+// ДОПОЛНИТЕЛЬНО: НЕ ЗАКРЫВАТЬ ПРИ КЛИКЕ НА ДОСКУ
+stepaModal.addEventListener('click', function(e) {
+    e.stopPropagation();
 });
 
 function stepaUpdateColors() {

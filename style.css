@@ -619,6 +619,34 @@ button {
     padding: 4px 0;
 }
 
+.search-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.search-tab {
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 10px;
+    transition: all 0.1s ease;
+}
+
+.search-tab:hover {
+    color: white;
+    background: rgba(91,140,214,0.1);
+}
+
+.search-tab.active {
+    border-color: var(--accent);
+    color: white;
+    background: rgba(91,140,214,0.15);
+}
+
 .search-input {
     height: 32px;
     padding: 0 10px;
@@ -669,6 +697,37 @@ button {
 
 .search-result-status.online {
     color: #4caf50;
+}
+
+.search-result-post {
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    margin-bottom: 8px;
+    background: var(--panel-soft);
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.search-result-post:hover {
+    background: #3a4560;
+}
+
+.search-result-post .post-author {
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.search-result-post .post-content {
+    margin-top: 4px;
+    color: var(--text);
+    font-size: 11px;
+}
+
+.search-result-post .post-date {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 10px;
 }
 
 .friends-container {
@@ -934,64 +993,4 @@ button {
         animation: none !important;
         transition: none !important;
     }
-}
-/* Добавьте эти стили в конец style.css */
-
-.search-tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 10px;
-}
-
-.search-tab {
-    padding: 6px 12px;
-    border: 1px solid var(--line);
-    border-radius: 3px;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 10px;
-    transition: all 0.1s ease;
-}
-
-.search-tab:hover {
-    color: white;
-    background: rgba(91,140,214,0.1);
-}
-
-.search-tab.active {
-    border-color: var(--accent);
-    color: white;
-    background: rgba(91,140,214,0.15);
-}
-
-.search-result-post {
-    padding: 12px;
-    border: 1px solid var(--line);
-    border-radius: 3px;
-    margin-bottom: 8px;
-    background: var(--panel-soft);
-    cursor: pointer;
-    transition: background 0.1s ease;
-}
-
-.search-result-post:hover {
-    background: #3a4560;
-}
-
-.search-result-post .post-author {
-    font-weight: bold;
-    color: var(--accent);
-}
-
-.search-result-post .post-content {
-    margin-top: 4px;
-    color: var(--text);
-    font-size: 11px;
-}
-
-.search-result-post .post-date {
-    margin-top: 4px;
-    color: var(--muted);
-    font-size: 10px;
 }

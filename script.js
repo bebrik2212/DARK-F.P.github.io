@@ -1,6 +1,3 @@
-const firebaseConfig = { ... };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
 const firebaseConfig = {
     apiKey: "AIzaSyBa9NWi5FpmAx6ExJh1fJ3b1ipUEEBRxU",
     authDomain: "dark-fortport.firebaseapp.com",
@@ -182,12 +179,10 @@ function subscribeToPosts() {
         .limit(100)
         .onSnapshot(async (snapshot) => {
             const posts = [];
-
             for (const doc of snapshot.docs) {
                 const data = doc.data();
                 let authorName = 'АНОНИМ';
                 let authorAvatar = DEFAULT_AVATAR;
-
                 if (data.authorId) {
                     try {
                         const authorDoc = await db.collection('profiles').doc(data.authorId).get();
@@ -198,7 +193,6 @@ function subscribeToPosts() {
                         }
                     } catch (e) {}
                 }
-
                 posts.push({
                     id: doc.id,
                     ...data,
@@ -206,7 +200,6 @@ function subscribeToPosts() {
                     authorAvatar: authorAvatar
                 });
             }
-
             allPosts = posts;
             renderAllPosts();
             updateNotifCount();
@@ -228,7 +221,6 @@ async function createPost(text, media) {
         showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
         return false;
     }
-
     try {
         await db.collection('posts').add({
             authorId: profileId,
@@ -256,16 +248,13 @@ async function deletePost(postId) {
             showToast('ПОСТ НЕ НАЙДЕН', true);
             return false;
         }
-
         const data = doc.data();
         const isAdmin = ADMIN_NICKNAMES.includes(currentProfile?.nickname);
         const isOwner = data.authorId === profileId;
-
         if (!isAdmin && !isOwner) {
             showToast('НЕ ВАШ ПОСТ', true);
             return false;
         }
-
         await db.collection('posts').doc(postId).delete();
         showToast(isAdmin ? 'ПОСТ УДАЛЁН (АДМИН)' : 'ПОСТ УДАЛЁН');
         return true;
@@ -281,18 +270,15 @@ async function votePost(postId, value) {
         showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
         return false;
     }
-
     try {
         const docRef = db.collection('posts').doc(postId);
         const doc = await docRef.get();
         if (!doc.exists) return false;
         const data = doc.data();
-
         const votes = data.votes || {};
         const currentVote = votes[profileId] || 0;
         let likes = data.likes || 0;
         let dislikes = data.dislikes || 0;
-
         if (currentVote === value) {
             delete votes[profileId];
             if (value === 1) likes--;
@@ -304,7 +290,6 @@ async function votePost(postId, value) {
             if (value === 1) likes++;
             else dislikes++;
         }
-
         await docRef.update({ likes, dislikes, votes });
         return true;
     } catch (error) {
@@ -318,13 +303,11 @@ async function addComment(postId, text) {
         showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
         return false;
     }
-
     try {
         const docRef = db.collection('posts').doc(postId);
         const doc = await docRef.get();
         if (!doc.exists) return false;
         const data = doc.data();
-
         const comments = data.comments || [];
         comments.push({
             id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
@@ -332,7 +315,6 @@ async function addComment(postId, text) {
             text: text,
             createdAt: new Date().toISOString()
         });
-
         await docRef.update({ comments });
         return true;
     } catch (error) {
@@ -343,11 +325,7 @@ async function addComment(postId, text) {
 
 function updateProfileUI() {
     if (!currentProfile) return;
-
-    const nick = document.activeElement === nicknameInput
-        ? nicknameInput.value.trim()
-        : (currentProfile.nickname || '');
-
+    const nick = document.activeElement === nicknameInput ? nicknameInput.value.trim() : (currentProfile.nickname || '');
     if (document.activeElement !== nicknameInput) {
         nicknameInput.value = nick;
     }
@@ -363,7 +341,6 @@ function renderAllPosts() {
         const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
         return dateB - dateA;
     });
-
     if (sorted.length) {
         postsListFeedEl.innerHTML = sorted.map(p => renderPostCard(p)).join('');
     } else {
@@ -375,7 +352,6 @@ function renderAllPosts() {
             </div>
         `;
     }
-
     const myPosts = sorted.filter(p => p.authorId === profileId);
     if (myPosts.length) {
         postsListProfileEl.innerHTML = myPosts.map(p => renderPostCard(p)).join('');
@@ -388,11 +364,7 @@ function renderPostCard(post) {
     const isMine = post.authorId === profileId;
     const isAdmin = ADMIN_NICKNAMES.includes(currentProfile?.nickname);
     const canDelete = isMine || isAdmin;
-    
-    const deleteBtn = canDelete ? `
-        <button class="delete-post-btn" data-delete="${post.id}" type="button">X</button>
-    ` : '';
-
+    const deleteBtn = canDelete ? `<button class="delete-post-btn" data-delete="${post.id}" type="button">✕</button>` : '';
     let mediaHTML = '';
     if (post.media && post.media.length) {
         mediaHTML = `<div class="post-media">${post.media.map(m => {
@@ -403,7 +375,6 @@ function renderPostCard(post) {
             }
         }).join('')}</div>`;
     }
-
     const comments = post.comments || [];
     const commentsHTML = comments.map(c => {
         return `
@@ -416,11 +387,9 @@ function renderPostCard(post) {
             </div>
         `;
     }).join('');
-
     const isOpen = openComments.has(post.id);
     const myVote = post.votes?.[profileId] || 0;
     const postTime = post.createdAt?.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
-
     return `
         <div class="post-card" data-id="${post.id}">
             <div class="post-header">
@@ -432,15 +401,9 @@ function renderPostCard(post) {
             ${post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : ''}
             ${mediaHTML}
             <div class="post-footer">
-                <button class="vote-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">
-                    ❤️ ${post.likes || 0}
-                </button>
-                <button class="vote-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">
-                    👎 ${post.dislikes || 0}
-                </button>
-                <button class="comment-btn" data-toggle="${post.id}" type="button">
-                    💬 ${comments.length}
-                </button>
+                <button class="vote-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">❤️ ${post.likes || 0}</button>
+                <button class="vote-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">👎 ${post.dislikes || 0}</button>
+                <button class="comment-btn" data-toggle="${post.id}" type="button">💬 ${comments.length}</button>
             </div>
             <div class="comments-section" id="comments-${post.id}" style="display:${isOpen ? 'block' : 'none'}">
                 ${commentsHTML}
@@ -494,25 +457,21 @@ async function searchUsers(query) {
         searchResults.innerHTML = '<div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>';
         return;
     }
-
     try {
         const snapshot = await db.collection('profiles')
             .where('nickname', '>=', query)
             .where('nickname', '<=', query + '\uf8ff')
             .limit(20)
             .get();
-
         if (snapshot.empty) {
             searchResults.innerHTML = '<div class="empty-posts">ПОЛЬЗОВАТЕЛИ НЕ НАЙДЕНЫ</div>';
             return;
         }
-
         let html = '';
         snapshot.forEach(doc => {
             const data = doc.data();
             const isFriend = currentProfile?.friends?.includes(doc.id) || false;
             const isSelf = doc.id === profileId;
-            
             html += `
                 <div class="search-result-item" data-id="${doc.id}">
                     <img class="search-result-avatar" src="${data.avatarData || DEFAULT_AVATAR}">
@@ -532,7 +491,6 @@ async function searchUsers(query) {
                 </div>
             `;
         });
-
         searchResults.innerHTML = html;
     } catch (error) {
         console.error('Ошибка поиска:', error);
@@ -545,16 +503,13 @@ async function searchPosts(query) {
         searchResults.innerHTML = '<div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>';
         return;
     }
-
     try {
         const snapshot = await db.collection('posts')
             .orderBy('createdAt', 'desc')
             .limit(100)
             .get();
-
         const results = [];
         const queryLower = query.toLowerCase().trim();
-
         for (const doc of snapshot.docs) {
             const data = doc.data();
             const text = (data.text || '').toLowerCase();
@@ -575,12 +530,10 @@ async function searchPosts(query) {
                 });
             }
         }
-
         if (!results.length) {
             searchResults.innerHTML = '<div class="empty-posts">ПОСТЫ НЕ НАЙДЕНЫ</div>';
             return;
         }
-
         let html = '';
         results.forEach(post => {
             const postTime = post.createdAt?.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
@@ -592,7 +545,6 @@ async function searchPosts(query) {
                 </div>
             `;
         });
-
         searchResults.innerHTML = html;
     } catch (error) {
         console.error('Ошибка поиска постов:', error);
@@ -610,13 +562,11 @@ function performSearch(query) {
 
 async function loadFriends() {
     if (!currentProfile) return;
-
     const friendIds = currentProfile.friends || [];
     if (!friendIds.length) {
         friendsList.innerHTML = '<div class="empty-posts">У ВАС НЕТ ДРУЗЕЙ</div>';
         return;
     }
-
     try {
         let html = '';
         for (const friendId of friendIds) {
@@ -634,7 +584,7 @@ async function loadFriends() {
                         </div>
                         <div class="friend-actions">
                             <button class="chat-friend" data-chat="${friendId}">💬</button>
-                            <button class="remove-friend" data-remove-friend="${friendId}">X</button>
+                            <button class="remove-friend" data-remove-friend="${friendId}">✕</button>
                         </div>
                     </div>
                 `;
@@ -653,16 +603,13 @@ async function addFriend(userId) {
         showToast('НЕЛЬЗЯ ДОБАВИТЬ СЕБЯ', true);
         return false;
     }
-
     const friends = currentProfile.friends || [];
     if (friends.includes(userId)) {
         showToast('УЖЕ В ДРУЗЬЯХ', true);
         return false;
     }
-
     friends.push(userId);
     currentProfile.friends = friends;
-    
     try {
         await db.collection('profiles').doc(profileId).update({ friends });
         setCachedData({ profile: currentProfile });
@@ -678,14 +625,11 @@ async function addFriend(userId) {
 
 async function removeFriend(userId) {
     if (!currentProfile) return false;
-
     const friends = currentProfile.friends || [];
     const index = friends.indexOf(userId);
     if (index === -1) return false;
-
     friends.splice(index, 1);
     currentProfile.friends = friends;
-
     try {
         await db.collection('profiles').doc(profileId).update({ friends });
         setCachedData({ profile: currentProfile });
@@ -720,26 +664,20 @@ function loadChatMessages(userId) {
         unsubscribeChat();
         unsubscribeChat = null;
     }
-
     chatMessages.innerHTML = '<div class="empty-posts">ЗАГРУЗКА СООБЩЕНИЙ...</div>';
-
     const chatId = [profileId, userId].sort().join('_');
-
     unsubscribeChat = db.collection('chats').doc(chatId)
         .onSnapshot((doc) => {
             if (!doc.exists) {
                 chatMessages.innerHTML = '<div class="empty-posts">НАЧНИТЕ ОБЩЕНИЕ</div>';
                 return;
             }
-
             const data = doc.data();
             const messages = data.messages || [];
-
             if (!messages.length) {
                 chatMessages.innerHTML = '<div class="empty-posts">НАЧНИТЕ ОБЩЕНИЕ</div>';
                 return;
             }
-
             let html = '';
             messages.forEach(msg => {
                 const isMine = msg.authorId === profileId;
@@ -751,7 +689,6 @@ function loadChatMessages(userId) {
                     </div>
                 `;
             });
-
             chatMessages.innerHTML = html;
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }, (error) => {
@@ -765,19 +702,15 @@ async function sendMessage(text) {
         showToast('ЧАТ НЕ ОТКРЫТ', true);
         return;
     }
-
     if (!text.trim()) {
         showToast('ВВЕДИТЕ СООБЩЕНИЕ', true);
         return;
     }
-
     try {
         const chatId = [profileId, chatWith].sort().join('_');
         const chatRef = db.collection('chats').doc(chatId);
-
         const doc = await chatRef.get();
         const messages = doc.exists ? (doc.data().messages || []) : [];
-
         const authorName = currentProfile?.nickname || 'АНОНИМ';
         messages.push({
             authorId: profileId,
@@ -785,7 +718,6 @@ async function sendMessage(text) {
             text: text.trim(),
             createdAt: new Date().toISOString()
         });
-
         await chatRef.set({ messages }, { merge: true });
         chatInput.value = '';
         showToast('СООБЩЕНИЕ ОТПРАВЛЕНО');
@@ -869,7 +801,7 @@ function renderMediaPreview() {
                     ? `<video src="${item.url}" muted></video>`
                     : `<img src="${item.url}">`}
                 <div class="preview-size">${escapeHtml(item.file.name)}</div>
-                <button class="remove-media" data-remove="${i}" type="button">X</button>
+                <button class="remove-media" data-remove="${i}" type="button">✕</button>
             </div>
         `).join('');
     } else {
@@ -948,7 +880,6 @@ document.addEventListener('click', function(e) {
         votePost(voteBtn.dataset.id, Number(voteBtn.dataset.vote));
         return;
     }
-
     const toggleBtn = e.target.closest('[data-toggle]');
     if (toggleBtn) {
         const id = toggleBtn.dataset.toggle;
@@ -959,7 +890,6 @@ document.addEventListener('click', function(e) {
         open ? openComments.add(id) : openComments.delete(id);
         return;
     }
-
     const commentBtn = e.target.closest('[data-comment]');
     if (commentBtn) {
         if (!currentProfile?.nickname) {
@@ -975,14 +905,12 @@ document.addEventListener('click', function(e) {
         input.value = '';
         return;
     }
-
     const delBtn = e.target.closest('[data-delete]');
     if (delBtn) {
         if (!confirm('УДАЛИТЬ ПОСТ?')) return;
         deletePost(delBtn.dataset.delete);
         return;
     }
-
     const addFriendBtn = e.target.closest('[data-add-friend]');
     if (addFriendBtn) {
         const userId = addFriendBtn.dataset.addFriend;
@@ -995,14 +923,12 @@ document.addEventListener('click', function(e) {
         performSearch(searchInput.value);
         return;
     }
-
     const removeFriendBtn = e.target.closest('[data-remove-friend]');
     if (removeFriendBtn) {
         if (!confirm('УДАЛИТЬ ИЗ ДРУЗЕЙ?')) return;
         removeFriend(removeFriendBtn.dataset.removeFriend);
         return;
     }
-
     const chatBtn = e.target.closest('[data-chat]');
     if (chatBtn) {
         const userId = chatBtn.dataset.chat;
@@ -1012,7 +938,6 @@ document.addEventListener('click', function(e) {
         openChat(userId, nick);
         return;
     }
-
     const postResult = e.target.closest('[data-post]');
     if (postResult) {
         const postId = postResult.dataset.post;
@@ -1087,7 +1012,6 @@ function setActiveTab(buttonId, sectionId) {
     document.querySelectorAll('.section').forEach(section => {
         section.classList.toggle('active', section.id === sectionId);
     });
-
     if (sectionId === 'friendsSection') {
         loadFriends();
     }
@@ -1127,22 +1051,17 @@ async function init() {
     try {
         console.log('DARK FORT INIT');
         console.log('PROJECT:', firebaseConfig.projectId);
-
         await db.collection('_test').doc('test').set({ test: true });
         console.log('Firebase подключен');
-
         await getOrCreateProfile();
         subscribeToPosts();
         await updateOnlineStatus(true);
-
         if (!currentProfile?.nickname) {
             nicknameInput.focus();
         }
-
         window.addEventListener('beforeunload', () => {
             updateOnlineStatus(false);
         });
-
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 updateOnlineStatus(false);
@@ -1150,18 +1069,15 @@ async function init() {
                 updateOnlineStatus(true);
             }
         });
-
         console.log('DARK FORT ONLINE');
     } catch (error) {
         console.error('Ошибка:', error);
         showToast('ОШИБКА ПОДКЛЮЧЕНИЯ К FIREBASE', true);
-        
         const cached = getCachedData();
         if (cached?.profile) {
             currentProfile = cached.profile;
             updateProfileUI();
         }
-        
         postsListFeedEl.innerHTML = `
             <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
                 <div style="font-size:48px;margin-bottom:12px;">⚠️</div>

@@ -1,3 +1,7 @@
+// ============================================================
+// FIREBASE
+// ============================================================
+
 const firebaseConfig = {
     apiKey: "AIzaSyBa9NWi5FpmAx6ExJh1fJ3b1ipUEEBRxU",
     authDomain: "dark-fortport.firebaseapp.com",
@@ -1090,11 +1094,12 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
 // ============================================================
-// СТЕПАША - МИНИ-ИГРЫ
+// СТЕПАША
 // ============================================================
 
-const stepaContainer = document.getElementById('stepaContainer');
+const stepaGif = document.getElementById('stepaGif');
 const stepaModal = document.getElementById('stepaModal');
 const stepaModalClose = document.getElementById('stepaModalClose');
 const stepaPhrase = document.getElementById('stepaPhrase');
@@ -1118,8 +1123,7 @@ let stepaDifficulty = 'medium';
 
 const STEPA_WHITE_PIECE = 'https://avatanplus.com/files/resources/original/5f394193cd6b2173f7a82981.png';
 
-// ОТКРЫТИЕ МОДАЛКИ
-stepaContainer.addEventListener('click', function(e) {
+stepaGif.addEventListener('click', function(e) {
     e.stopPropagation();
     stepaModal.classList.toggle('open');
     if (stepaModal.classList.contains('open')) {
@@ -1131,9 +1135,8 @@ stepaModalClose.addEventListener('click', function() {
     stepaModal.classList.remove('open');
 });
 
-// ЗАКРЫТИЕ ПРИ КЛИКЕ ВНЕ МОДАЛКИ
 document.addEventListener('click', function(e) {
-    if (!stepaModal.contains(e.target) && !stepaContainer.contains(e.target)) {
+    if (!stepaModal.contains(e.target) && !stepaGif.contains(e.target)) {
         stepaModal.classList.remove('open');
     }
 });
@@ -1143,7 +1146,6 @@ function stepaUpdateColors() {
     stepaBotColor = stepaPlayerColor === 'white' ? 'black' : 'white';
 }
 
-// RPS
 document.querySelectorAll('.stepa-rps-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         const moves = ['камень','ножницы','бумага'];
@@ -1164,7 +1166,6 @@ document.querySelectorAll('.stepa-rps-btn').forEach(function(btn) {
     });
 });
 
-// TTT
 function stepaCheckWin(b) {
     const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     for (const [a,b_,c] of wins) if (b[a] && b[a]===b[b_] && b[a]===b[c]) return b[a];
@@ -1258,7 +1259,6 @@ function stepaTttMove(i) {
     }, 300);
 }
 
-// Checkers
 function stepaCreatePos() {
     const pos = [];
     for (let r=0; r<8; r++) {
@@ -1475,7 +1475,6 @@ function stepaCheckersClick(row, col) {
     stepaRenderCheckers();
 }
 
-// Переключение игр
 document.querySelectorAll('.stepa-game-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         document.querySelectorAll('.stepa-game-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -1523,5 +1522,4 @@ function stepaResetAll() {
     }
 }
 
-// Инициализация
 stepaResetAll();

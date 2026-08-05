@@ -1096,7 +1096,7 @@ async function init() {
 document.addEventListener('DOMContentLoaded', init);
 
 // ============================================================
-// СТЕПАША
+// СТЕПАША - МИНИ-ИГРЫ
 // ============================================================
 
 const stepaGif = document.getElementById('stepaGif');

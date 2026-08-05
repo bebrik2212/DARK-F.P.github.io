@@ -1090,3 +1090,415 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+// ============================================================
+// СТЕПАША - МИНИ-ИГРЫ
+// ============================================================
+
+const stepaContainer = document.getElementById('stepaContainer');
+const stepaModal = document.getElementById('stepaModal');
+const stepaModalClose = document.getElementById('stepaModalClose');
+const stepaPhrase = document.getElementById('stepaPhrase');
+const stepaBotSay = document.getElementById('stepaBotSay');
+const stepaResult = document.getElementById('stepaResult');
+const stepaReset = document.getElementById('stepaReset');
+
+let stepaGame = 'rps';
+let stepaBoard = ['','','','','','','','',''];
+let stepaActive = true;
+let stepaMistakeChance = 0.15;
+let stepaPos = null;
+let stepaSelected = null;
+let stepaTurn = 'white';
+let stepaPlayerColor = 'white';
+let stepaBotColor = 'black';
+let stepaGameOver = false;
+let stepaChain = [];
+let stepaChainTimer = null;
+let stepaDifficulty = 'medium';
+
+const STEPA_WHITE_PIECE = 'https://avatanplus.com/files/resources/original/5f394193cd6b2173f7a82981.png';
+
+stepaContainer.addEventListener('click', () => {
+    stepaModal.classList.toggle('open');
+    if (stepaModal.classList.contains('open')) {
+        stepaResetAll();
+    }
+});
+
+stepaModalClose.addEventListener('click', () => {
+    stepaModal.classList.remove('open');
+});
+
+document.addEventListener('click', (e) => {
+    if (!stepaModal.contains(e.target) && !stepaContainer.contains(e.target)) {
+        stepaModal.classList.remove('open');
+    }
+});
+
+function stepaUpdateColors() {
+    stepaPlayerColor = document.getElementById('stepaColor').value;
+    stepaBotColor = stepaPlayerColor === 'white' ? 'black' : 'white';
+}
+
+// RPS
+document.querySelectorAll('.stepa-rps-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const moves = ['камень','ножницы','бумага'];
+        const player = btn.dataset.move;
+        const bot = moves[Math.floor(Math.random()*3)];
+        const playerName = player === 'rock' ? 'камень' : player === 'scissors' ? 'ножницы' : 'бумага';
+        stepaBotSay.textContent = 'Степаша: я выбрал ' + bot;
+        if (playerName === bot) {
+            stepaResult.textContent = 'ничья';
+            stepaPhrase.textContent = 'ничья';
+        } else if ((playerName==='камень'&&bot==='ножницы')||(playerName==='ножницы'&&bot==='бумага')||(playerName==='бумага'&&bot==='камень')) {
+            stepaResult.textContent = 'ты победил';
+            stepaPhrase.textContent = 'повезло...';
+        } else {
+            stepaResult.textContent = 'Степаша победил';
+            stepaPhrase.textContent = 'бурмалда!';
+        }
+    });
+});
+
+// TTT
+function stepaCheckWin(b) {
+    const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    for (const [a,b_,c] of wins) if (b[a] && b[a]===b[b_] && b[a]===b[c]) return b[a];
+    return b.includes('') ? null : 'ничья';
+}
+
+function stepaMinimax(b, isMax) {
+    const winner = stepaCheckWin(b);
+    if (winner === 'X') return -10;
+    if (winner === 'O') return 10;
+    if (!b.includes('')) return 0;
+    if (isMax) {
+        let best = -999;
+        for (let i=0; i<9; i++) {
+            if (b[i] === '') { b[i] = 'O'; best = Math.max(best, stepaMinimax(b, false)); b[i] = ''; }
+        }
+        return best;
+    } else {
+        let best = 999;
+        for (let i=0; i<9; i++) {
+            if (b[i] === '') { b[i] = 'X'; best = Math.min(best, stepaMinimax(b, true)); b[i] = ''; }
+        }
+        return best;
+    }
+}
+
+function stepaFindBestMove() {
+    let bestScore = -999, bestMove = -1, empty = [];
+    for (let i=0; i<9; i++) {
+        if (stepaBoard[i] === '') {
+            empty.push(i);
+            stepaBoard[i] = 'O';
+            const score = stepaMinimax(stepaBoard, false);
+            stepaBoard[i] = '';
+            if (score > bestScore) { bestScore = score; bestMove = i; }
+        }
+    }
+    if (Math.random() < stepaMistakeChance && empty.length > 1) {
+        const bad = empty.filter(i => i !== bestMove);
+        if (bad.length > 0) return bad[Math.floor(Math.random() * bad.length)];
+    }
+    return bestMove;
+}
+
+function stepaRenderTtt() {
+    const board = document.getElementById('stepaBoard');
+    board.innerHTML = '';
+    stepaBoard.forEach((cell, i) => {
+        const btn = document.createElement('button');
+        btn.textContent = cell;
+        btn.onclick = () => stepaTttMove(i);
+        board.appendChild(btn);
+    });
+}
+
+function stepaTttMove(i) {
+    if (!stepaActive || stepaBoard[i] !== '') return;
+    stepaBoard[i] = 'X';
+    stepaRenderTtt();
+    const winner = stepaCheckWin(stepaBoard);
+    if (winner) {
+        stepaActive = false;
+        if (winner==='X') { stepaResult.textContent='ты победил'; stepaPhrase.textContent='повезло...'; }
+        else { stepaResult.textContent='ничья'; stepaPhrase.textContent='ничья'; }
+        stepaBotSay.textContent = 'Степаша: ...';
+        return;
+    }
+    if (!stepaBoard.includes('')) {
+        stepaActive = false;
+        stepaResult.textContent='ничья'; stepaPhrase.textContent='ничья';
+        stepaBotSay.textContent = 'Степаша: ничья';
+        return;
+    }
+    setTimeout(() => {
+        if (!stepaActive) return;
+        const botMove = stepaFindBestMove();
+        if (botMove >= 0) {
+            stepaBoard[botMove] = 'O';
+            stepaRenderTtt();
+            stepaBotSay.textContent = 'Степаша: я сходил';
+            const w = stepaCheckWin(stepaBoard);
+            if (w) {
+                stepaActive = false;
+                if (w==='O') { stepaResult.textContent='Степаша победил'; stepaPhrase.textContent='бурмалда!'; }
+                else { stepaResult.textContent='ничья'; stepaPhrase.textContent='ничья'; }
+            } else if (!stepaBoard.includes('')) {
+                stepaActive = false;
+                stepaResult.textContent='ничья'; stepaPhrase.textContent='ничья';
+            }
+        }
+    }, 300);
+}
+
+// Checkers
+function stepaCreatePos() {
+    const pos = [];
+    for (let r=0; r<8; r++) {
+        pos[r] = [];
+        for (let c=0; c<8; c++) {
+            if ((r+c)%2 === 1) {
+                if (r<3) pos[r][c] = 'b';
+                else if (r>4) pos[r][c] = 'w';
+                else pos[r][c] = '';
+            } else pos[r][c] = '';
+        }
+    }
+    return pos;
+}
+
+function stepaClone(pos) { return pos.map(row => [...row]); }
+
+function stepaGetCaptures(pos, row, col) {
+    const piece = pos[row][col];
+    if (!piece) return [];
+    const isWhite = piece === 'w' || piece === 'W';
+    const isKing = piece === 'W' || piece === 'B';
+    const caps = [];
+    const dirs = isKing ? [[-1,-1],[-1,1],[1,-1],[1,1]] : [[isWhite?-1:1,-1],[isWhite?-1:1,1]];
+    for (const [dr,dc] of dirs) {
+        if (!isKing) { const r=row+dr,c=col+dc; if (r>=0&&r<8&&c>=0&&c<8&&pos[r][c]) { const tw=pos[r][c]==='w'||pos[r][c]==='W'; if(isWhite!==tw){const r2=r+dr,c2=c+dc;if(r2>=0&&r2<8&&c2>=0&&c2<8&&!pos[r2][c2]) caps.push({row:r2,col:c2,captures:[{row:r,col:c}]});} } }
+        else for (let i=1; i<8; i++) { const r=row+dr*i,c=col+dc*i; if(r<0||r>=8||c<0||c>=8) break; if(pos[r][c]){const tw=pos[r][c]==='w'||pos[r][c]==='W'; if(isWhite!==tw){const r2=r+dr,c2=c+dc;if(r2>=0&&r2<8&&c2>=0&&c2<8&&!pos[r2][c2]) caps.push({row:r2,col:c2,captures:[{row:r,col:c}]});} break; } }
+    }
+    return caps;
+}
+
+function stepaGetMoves(pos, row, col) {
+    const piece = pos[row][col];
+    if (!piece) return [];
+    const isWhite = piece === 'w' || piece === 'W';
+    const isKing = piece === 'W' || piece === 'B';
+    const caps = stepaGetCaptures(pos, row, col);
+    if (caps.length > 0) return caps;
+    const moves = [];
+    const dirs = isKing ? [[-1,-1],[-1,1],[1,-1],[1,1]] : [[isWhite?-1:1,-1],[isWhite?-1:1,1]];
+    for (const [dr,dc] of dirs) {
+        if (!isKing) { const r=row+dr,c=col+dc; if(r>=0&&r<8&&c>=0&&c<8&&!pos[r][c]) moves.push({row:r,col:c,captures:[]}); }
+        else for (let i=1; i<8; i++) { const r=row+dr*i,c=col+dc*i; if(r<0||r>=8||c<0||c>=8) break; if(!pos[r][c]) moves.push({row:r,col:c,captures:[]}); else break; }
+    }
+    return moves;
+}
+
+function stepaAllMoves(pos, isWhite) {
+    const all = []; let hasCaps = false;
+    for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+        const p = pos[r][c];
+        if (!p || (p==='w'||p==='W') !== isWhite) continue;
+        const m = stepaGetMoves(pos, r, c);
+        for (const mv of m) { if (mv.captures.length>0) hasCaps = true; all.push({fromRow:r,fromCol:c,toRow:mv.row,toCol:mv.col,captures:mv.captures}); }
+    }
+    if (hasCaps) return all.filter(m => m.captures.length>0);
+    return all;
+}
+
+function stepaMakeMove(pos, move) {
+    const np = stepaClone(pos);
+    const piece = np[move.fromRow][move.fromCol];
+    np[move.toRow][move.toCol] = piece;
+    np[move.fromRow][move.fromCol] = '';
+    move.captures.forEach(cap => np[cap.row][cap.col] = '');
+    if (piece==='w' && move.toRow===0) np[move.toRow][move.toCol] = 'W';
+    if (piece==='b' && move.toRow===7) np[move.toRow][move.toCol] = 'B';
+    return np;
+}
+
+function stepaHasMoreCaps(pos, row, col) { return stepaGetCaptures(pos, row, col).length > 0; }
+
+function stepaEval(pos) {
+    let score = 0;
+    for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+        const p = pos[r][c];
+        if (p==='w') score += 10;
+        if (p==='W') score += 30;
+        if (p==='b') score -= 10;
+        if (p==='B') score -= 30;
+    }
+    return score;
+}
+
+function stepaMinimaxCheckers(pos, depth, isMax, alpha, beta) {
+    if (depth===0) return stepaEval(pos);
+    const moves = stepaAllMoves(pos, isMax);
+    if (moves.length===0) return isMax ? -9999 : 9999;
+    if (isMax) {
+        let best = -99999;
+        for (const m of moves) { const np = stepaMakeMove(pos, m); best = Math.max(best, stepaMinimaxCheckers(np, depth-1, false, alpha, beta)); alpha = Math.max(alpha, best); if (beta <= alpha) break; }
+        return best;
+    } else {
+        let best = 99999;
+        for (const m of moves) { const np = stepaMakeMove(pos, m); best = Math.min(best, stepaMinimaxCheckers(np, depth-1, true, alpha, beta)); beta = Math.min(beta, best); if (beta <= alpha) break; }
+        return best;
+    }
+}
+
+function stepaFindBestCheckers(pos) {
+    const botIsWhite = stepaBotColor === 'white';
+    const moves = stepaAllMoves(pos, botIsWhite);
+    if (moves.length===0) return null;
+    const depth = stepaDifficulty==='easy'?1:stepaDifficulty==='medium'?3:5;
+    let best = moves[0], bestScore = botIsWhite ? -99999 : 99999;
+    for (const m of moves) {
+        const np = stepaMakeMove(pos, m);
+        const score = stepaMinimaxCheckers(np, depth-1, !botIsWhite, -99999, 99999);
+        if (botIsWhite) { if (score > bestScore) { bestScore = score; best = m; } } else { if (score < bestScore) { bestScore = score; best = m; } }
+    }
+    if (stepaDifficulty==='easy' && Math.random()<0.3 && moves.length>1) return moves[Math.floor(Math.random()*moves.length)];
+    return best;
+}
+
+function stepaBotCheckers() {
+    if (stepaGameOver) return;
+    const move = stepaFindBestCheckers(stepaPos);
+    if (move) {
+        stepaPos = stepaMakeMove(stepaPos, move);
+        stepaBotSay.textContent = 'Степаша: я сходил';
+    }
+    stepaTurn = stepaPlayerColor;
+    stepaRenderCheckers();
+    const playerIsWhite = stepaPlayerColor === 'white';
+    if (stepaAllMoves(stepaPos, playerIsWhite).length === 0) {
+        stepaGameOver = true;
+        stepaResult.textContent = 'Степаша победил';
+        stepaPhrase.textContent = 'бурмалда!';
+    }
+}
+
+function stepaRenderCheckers() {
+    const board = document.getElementById('stepaCheckersBoard');
+    board.innerHTML = '';
+    for (let r=0; r<8; r++) for (let c=0; c<8; c++) {
+        const btn = document.createElement('button');
+        btn.className = (r+c)%2 === 0 ? 'white-cell' : 'black-cell';
+        const p = stepaPos[r][c];
+        if (p) {
+            const img = document.createElement('img');
+            img.src = STEPA_WHITE_PIECE;
+            img.className = 'stepa-piece-img';
+            if (p === 'w' || p === 'W') img.style.filter = 'none';
+            else img.style.filter = 'invert(1)';
+            btn.appendChild(img);
+            if (p === 'W' || p === 'B') { const l=document.createElement('span'); l.textContent='Д'; l.style.position='absolute'; l.style.fontSize='0.5rem'; l.style.color=p==='W'?'#000':'#fff'; l.style.fontWeight='bold'; l.style.pointerEvents='none'; btn.appendChild(l); }
+        }
+        if (stepaChain.length>0) { const lp=stepaChain[stepaChain.length-1]; if(stepaGetCaptures(stepaPos,lp.row,lp.col).find(m=>m.row===r&&m.col===c)) btn.classList.add('capture-hint'); }
+        if (stepaSelected && stepaSelected.row===r && stepaSelected.col===c) btn.classList.add('selected');
+        btn.onclick = () => stepaCheckersClick(r,c);
+        board.appendChild(btn);
+    }
+}
+
+function stepaCheckersClick(row, col) {
+    if (stepaGameOver || stepaTurn !== stepaPlayerColor) return;
+    const isPlayerWhite = stepaPlayerColor === 'white';
+    if (stepaChain.length>0) {
+        const lp = stepaChain[stepaChain.length-1];
+        const caps = stepaGetCaptures(stepaPos, lp.row, lp.col);
+        const valid = caps.find(m => m.row===row && m.col===col);
+        if (valid) {
+            stepaPos = stepaMakeMove(stepaPos, {fromRow:lp.row,fromCol:lp.col,toRow:row,toCol:col,captures:valid.captures||[]});
+            stepaChain.push({row,col});
+            if (stepaHasMoreCaps(stepaPos, row, col)) {
+                clearTimeout(stepaChainTimer);
+                stepaChainTimer = setTimeout(() => { stepaChain=[]; stepaTurn=stepaPlayerColor==='white'?'black':'white'; stepaRenderCheckers(); if(stepaTurn!==stepaPlayerColor) setTimeout(stepaBotCheckers,200); }, 4000);
+                stepaSelected = null; stepaRenderCheckers();
+            } else { clearTimeout(stepaChainTimer); stepaChain=[]; stepaTurn=stepaBotColor; stepaSelected=null; stepaRenderCheckers(); if(stepaTurn!==stepaPlayerColor) setTimeout(stepaBotCheckers,200); }
+        }
+        return;
+    }
+    if (stepaSelected) {
+        const p = stepaPos[stepaSelected.row][stepaSelected.col];
+        if (p && (p==='w'||p==='W') === isPlayerWhite) {
+            const moves = stepaGetMoves(stepaPos, stepaSelected.row, stepaSelected.col);
+            const valid = moves.find(m => m.row===row && m.col===col);
+            if (valid) {
+                stepaPos = stepaMakeMove(stepaPos, {fromRow:stepaSelected.row,fromCol:stepaSelected.col,toRow:row,toCol:col,captures:valid.captures||[]});
+                if (valid.captures && valid.captures.length>0 && stepaHasMoreCaps(stepaPos,row,col)) {
+                    stepaChain=[{row,col}];
+                    clearTimeout(stepaChainTimer);
+                    stepaChainTimer = setTimeout(() => { stepaChain=[]; stepaTurn=stepaPlayerColor==='white'?'black':'white'; stepaRenderCheckers(); if(stepaTurn!==stepaPlayerColor) setTimeout(stepaBotCheckers,200); }, 4000);
+                    stepaSelected=null; stepaRenderCheckers(); return;
+                }
+                stepaSelected=null; stepaTurn=stepaBotColor; stepaRenderCheckers(); if(stepaTurn!==stepaPlayerColor) setTimeout(stepaBotCheckers,200);
+                return;
+            }
+        }
+        stepaSelected=null;
+    }
+    const p = stepaPos[row][col];
+    if (p && (p==='w'||p==='W') === isPlayerWhite) stepaSelected = {row,col};
+    stepaRenderCheckers();
+}
+
+// Переключение игр
+document.querySelectorAll('.stepa-game-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.stepa-game-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        stepaGame = btn.dataset.stepaGame;
+        document.getElementById('stepaRps').style.display = stepaGame === 'rps' ? 'block' : 'none';
+        document.getElementById('stepaTtt').style.display = stepaGame === 'ttt' ? 'block' : 'none';
+        document.getElementById('stepaCheckers').style.display = stepaGame === 'checkers' ? 'block' : 'none';
+        stepaResetAll();
+    });
+});
+
+stepaReset.addEventListener('click', stepaResetAll);
+document.getElementById('stepaColor').addEventListener('change', stepaResetAll);
+document.getElementById('stepaDifficulty').addEventListener('change', () => { stepaDifficulty = document.getElementById('stepaDifficulty').value; stepaResetAll(); });
+
+function stepaResetAll() {
+    clearTimeout(stepaChainTimer);
+    stepaChain = [];
+    stepaUpdateColors();
+    stepaPhrase.textContent = 'бурмалда';
+    if (stepaGame === 'rps') {
+        stepaBotSay.textContent = 'Степаша: жду';
+        stepaResult.textContent = 'сделай выбор';
+    } else if (stepaGame === 'ttt') {
+        stepaBoard = ['','','','','','','','',''];
+        stepaActive = true;
+        stepaRenderTtt();
+        stepaBotSay.textContent = 'Степаша: твой ход';
+        stepaResult.textContent = 'крестики нолики';
+    } else if (stepaGame === 'checkers') {
+        stepaDifficulty = document.getElementById('stepaDifficulty').value;
+        stepaPos = stepaCreatePos();
+        stepaSelected = null;
+        stepaTurn = 'white';
+        stepaGameOver = false;
+        stepaRenderCheckers();
+        if (stepaPlayerColor === 'white') {
+            stepaBotSay.textContent = 'Степаша: твой ход (белые)';
+        } else {
+            stepaBotSay.textContent = 'Степаша: я хожу (белые)';
+            setTimeout(stepaBotCheckers, 500);
+        }
+        stepaResult.textContent = 'шашки';
+    }
+}
+
+// Инициализация
+stepaResetAll();

@@ -1,3 +1,19 @@
+const firebaseConfig = {
+    apiKey: "AIzaSyBa9NWi5FpmAx6ExJh1fJ3b1ipUEEBRxU",
+    authDomain: "dark-fortport.firebaseapp.com",
+    projectId: "dark-fortport",
+    storageBucket: "dark-fortport.firebasestorage.app",
+    messagingSenderId: "3814531503",
+    appId: "1:3814531503:web:a8200e1f337935a3530f5a"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+db.enablePersistence()
+    .then(() => console.log('Offline enabled'))
+    .catch(() => console.warn('Offline not available'));
+
 const ADMIN_NICKNAMES = ['amamammellstroy67'];
 const DEFAULT_AVATAR = 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg';
 const MAX_FILE_SIZE = 50 * 1024 * 1024;

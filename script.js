@@ -18,8 +18,12 @@ db.enablePersistence()
     .then(() => console.log('Offline enabled'))
     .catch(() => console.warn('Offline not available'));
 
+// ============================================================
+// КОНСТАНТЫ
+// ============================================================
+
 const ADMIN_NICKNAMES = ['amamammellstroy67'];
-const DEFAULT_AVATAR = 'https://i.pinimg.com/236x/ca/32/a0/ca32a08ba5cdefbffa115c6cced9f519.jpg';
+const DEFAULT_AVATAR = 'https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png';
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
@@ -39,6 +43,10 @@ let unsubscribePosts = null;
 let chatWith = null;
 let unsubscribeChat = null;
 let searchMode = 'users';
+
+// ============================================================
+// DOM
+// ============================================================
 
 const nicknameInput = document.getElementById('nicknameInput');
 const profileAvatarEl = document.getElementById('profileAvatar');
@@ -69,6 +77,10 @@ const closeChatBtn = document.getElementById('closeChatBtn');
 const searchUsersTab = document.getElementById('searchUsersTab');
 const searchPostsTab = document.getElementById('searchPostsTab');
 
+// ============================================================
+// КЭШ
+// ============================================================
+
 function getCachedData() {
     try {
         const raw = localStorage.getItem('df_cache');
@@ -82,6 +94,10 @@ function setCachedData(data) {
         localStorage.setItem('df_cache', JSON.stringify(data));
     } catch (e) {}
 }
+
+// ============================================================
+// ПРОФИЛЬ
+// ============================================================
 
 async function getOrCreateProfile() {
     try {
@@ -170,6 +186,10 @@ async function updateOnlineStatus(online) {
     }
 }
 
+// ============================================================
+// ПОСТЫ
+// ============================================================
+
 function subscribeToPosts() {
     if (unsubscribePosts) {
         unsubscribePosts();
@@ -214,7 +234,7 @@ function subscribeToPosts() {
                     <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
                     <div>ОШИБКА ПОДКЛЮЧЕНИЯ</div>
                     <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
-                    <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+                    <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:#4fc3f7;border:none;border-radius:8px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
                 </div>
             `;
         });
@@ -327,6 +347,10 @@ async function addComment(postId, text) {
     }
 }
 
+// ============================================================
+// UI
+// ============================================================
+
 function updateProfileUI() {
     if (!currentProfile) return;
     const nick = document.activeElement === nicknameInput ? nicknameInput.value.trim() : (currentProfile.nickname || '');
@@ -350,7 +374,7 @@ function renderAllPosts() {
     } else {
         postsListFeedEl.innerHTML = `
             <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
-                <div style="font-size:48px;margin-bottom:12px;">📡</div>
+                <div style="font-size:48px;margin-bottom:12px;">🌐</div>
                 <div>ПОКА НЕТ ПОСТОВ</div>
                 <div style="font-size:0.85rem;color:#5a5d66;">БУДЬТЕ ПЕРВЫМ</div>
             </div>
@@ -455,6 +479,10 @@ function showToast(msg, err = false) {
     document.body.append(t);
     setTimeout(() => t.remove(), 3000);
 }
+
+// ============================================================
+// ПОИСК
+// ============================================================
 
 async function searchUsers(query) {
     if (!query.trim()) {
@@ -564,6 +592,10 @@ function performSearch(query) {
     }
 }
 
+// ============================================================
+// ДРУЗЬЯ
+// ============================================================
+
 async function loadFriends() {
     if (!currentProfile) return;
     const friendIds = currentProfile.friends || [];
@@ -646,6 +678,10 @@ async function removeFriend(userId) {
         return false;
     }
 }
+
+// ============================================================
+// ЧАТ
+// ============================================================
 
 function openChat(userId, userNickname) {
     chatWith = userId;
@@ -730,6 +766,10 @@ async function sendMessage(text) {
         showToast('ОШИБКА ОТПРАВКИ', true);
     }
 }
+
+// ============================================================
+// СОБЫТИЯ
+// ============================================================
 
 nicknameInput.addEventListener('input', function() {
     const nick = this.value.trim();
@@ -873,6 +913,10 @@ publishBtnEl.addEventListener('click', async function() {
         this.textContent = 'ОПУБЛИКОВАТЬ';
     }
 });
+
+// ============================================================
+// КЛИКИ
+// ============================================================
 
 document.addEventListener('click', function(e) {
     const voteBtn = e.target.closest('[data-vote]');
@@ -1051,6 +1095,10 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// ============================================================
+// ЗАПУСК
+// ============================================================
+
 async function init() {
     try {
         console.log('DARK FORT INIT');
@@ -1087,9 +1135,14 @@ async function init() {
                 <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
                 <div>ОФФЛАЙН РЕЖИМ</div>
                 <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
-                <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:#5b8cd6;border:none;border-radius:4px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+                <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:#4fc3f7;border:none;border-radius:8px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
             </div>
         `;
+    }
+    // Скрываем загрузочный экран
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) {
+        loadingScreen.classList.add('hidden');
     }
 }
 
@@ -1138,14 +1191,10 @@ stepaModalClose.addEventListener('click', function() {
 
 // НЕ ЗАКРЫВАТЬ МОДАЛКУ ПРИ КЛИКЕ ВНУТРИ НЕЁ
 document.addEventListener('click', function(e) {
-    if (!stepaModal.contains(e.target) && !stepaWrapper.contains(e.target)) {
-        stepaModal.classList.remove('open');
+    if (stepaModal.contains(e.target) || stepaWrapper.contains(e.target)) {
+        return;
     }
-});
-
-// ДОПОЛНИТЕЛЬНО: НЕ ЗАКРЫВАТЬ ПРИ КЛИКЕ НА ДОСКУ
-stepaModal.addEventListener('click', function(e) {
-    e.stopPropagation();
+    stepaModal.classList.remove('open');
 });
 
 function stepaUpdateColors() {
@@ -1530,9 +1579,3 @@ function stepaResetAll() {
 }
 
 stepaResetAll();
-// НЕ ЗАКРЫВАТЬ МОДАЛКУ ПРИ КЛИКЕ ВНУТРИ НЕЁ
-document.addEventListener('click', function(e) {
-    if (!stepaModal.contains(e.target) && !stepaWrapper.contains(e.target)) {
-        stepaModal.classList.remove('open');
-    }
-});

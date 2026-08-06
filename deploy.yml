@@ -31,7 +31,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
-          timeout: 600000  # 10 минут на загрузку
+          timeout: 2300000  # 10 минут на загрузку
 
       - name: Deploy to GitHub Pages
         id: deployment

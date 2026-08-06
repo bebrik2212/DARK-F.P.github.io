@@ -1459,7 +1459,6 @@ document.addEventListener('DOMContentLoaded', init);
 // ============================================================
 // СТЕПАША
 // ============================================================
-
 const stepaGif = document.getElementById('stepaGif');
 const stepaWrapper = document.getElementById('stepaWrapper');
 const stepaModal = document.getElementById('stepaModal');
@@ -1484,8 +1483,69 @@ let stepaDifficulty = 'medium';
 
 const STEPA_WHITE_PIECE = 'https://avatanplus.com/files/resources/original/5f394193cd6b2173f7a82981.png';
 
-// ---- ОТКРЫТИЕ/ЗАКРЫТИЕ МОДАЛКИ ----
+stepaGif.style.cssText = `
+    width: 120px !important;
+    height: 120px !important;
+    object-fit: contain !important;
+    image-rendering: pixelated !important;
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+    transition: transform 0.2s ease !important;
+    cursor: grab !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+`;
+
+stepaWrapper.style.cssText = `
+    position: fixed !important;
+    z-index: 999 !important;
+    cursor: grab !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+`;
+
+let isDragging = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+stepaWrapper.addEventListener('mousedown', function(e) {
+    if (e.target.closest('.stepa-modal')) return;
+    isDragging = true;
+    const rect = this.getBoundingClientRect();
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+    this.style.cursor = 'grabbing';
+    stepaGif.style.cursor = 'grabbing';
+    e.preventDefault();
+});
+
+document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    let x = e.clientX - dragOffsetX;
+    let y = e.clientY - dragOffsetY;
+    
+    const maxX = window.innerWidth - 140;
+    const maxY = window.innerHeight - 140;
+    x = Math.max(0, Math.min(x, maxX));
+    y = Math.max(0, Math.min(y, maxY));
+    
+    stepaWrapper.style.left = x + 'px';
+    stepaWrapper.style.top = y + 'px';
+});
+
+document.addEventListener('mouseup', function() {
+    if (isDragging) {
+        isDragging = false;
+        stepaWrapper.style.cursor = 'grab';
+        stepaGif.style.cursor = 'grab';
+    }
+});
+
 stepaWrapper.addEventListener('click', function(e) {
+    if (isDragging) return;
     e.stopPropagation();
     stepaModal.classList.toggle('open');
     if (stepaModal.classList.contains('open')) {
@@ -1497,7 +1557,6 @@ stepaModalClose.addEventListener('click', function() {
     stepaModal.classList.remove('open');
 });
 
-// ----- хули ты тут потерял долбаеб -----
 document.addEventListener('click', function(e) {
     if (stepaModal.contains(e.target) || stepaWrapper.contains(e.target)) {
         return;
@@ -1505,7 +1564,10 @@ document.addEventListener('click', function(e) {
     stepaModal.classList.remove('open');
 });
 
-// ---- КАМЕНЬ-НОЖНИЦЫ-БУМАГА ----
+stepaModal.addEventListener('click', function(e) {
+    e.stopPropagation();
+});
+
 document.querySelectorAll('.stepa-rps-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         const moves = ['камень','ножницы','бумага'];
@@ -1526,7 +1588,6 @@ document.querySelectorAll('.stepa-rps-btn').forEach(function(btn) {
     });
 });
 
-// ---- КРЕСТИКИ-НОЛИКИ ----
 function stepaCheckWin(b) {
     const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     for (const [a,b_,c] of wins) if (b[a] && b[a]===b[b_] && b[a]===b[c]) return b[a];
@@ -1616,7 +1677,6 @@ function stepaTttMove(i) {
     }, 300);
 }
 
-// ---- ШАШКИ (УМНЫЙ ИИ С MINIMAX) ----
 function stepaCreatePos() {
     const pos = [];
     for (let r=0; r<8; r++) {
@@ -1721,7 +1781,6 @@ function stepaEval(pos) {
     return score;
 }
 
-// ----- ОСНОВНОЙ АЛГОРИТМ -----
 function stepaMinimaxCheckers(pos, depth, isMax, alpha, beta) {
     if (depth===0) return stepaEval(pos);
     const moves = stepaAllMoves(pos, isMax);
@@ -1737,17 +1796,13 @@ function stepaMinimaxCheckers(pos, depth, isMax, alpha, beta) {
     }
 }
 
-// ----- ВЫБОР ЛУЧШЕГО ХОДА ДЛЯ СТЕПАШИ -----
 function stepaFindBestCheckers(pos) {
     const botIsWhite = stepaBotColor === 'white';
     const moves = stepaAllMoves(pos, botIsWhite);
     if (moves.length===0) return null;
-    
-    // Глубина зависит от сложности
     let depth = 1;
     if (stepaDifficulty === 'medium') depth = 3;
     if (stepaDifficulty === 'hard') depth = 5;
-    
     let best = moves[0], bestScore = botIsWhite ? -99999 : 99999;
     for (const m of moves) {
         const np = stepaMakeMove(pos, m);
@@ -1757,7 +1812,6 @@ function stepaFindBestCheckers(pos) {
     return best;
 }
 
-// ----- ХОД СТЕПАШИ В ШАШКАХ -----
 function stepaBotCheckers() {
     if (stepaGameOver) return;
     const move = stepaFindBestCheckers(stepaPos);
@@ -1775,7 +1829,6 @@ function stepaBotCheckers() {
     }
 }
 
-// ----- ОТРИСОВКА ДОСКИ ШАШЕК -----
 function stepaRenderCheckers() {
     const board = document.getElementById('stepaCheckersBoard');
     board.innerHTML = '';
@@ -1799,7 +1852,6 @@ function stepaRenderCheckers() {
     }
 }
 
-// ----- КЛИК ПО ДОСКЕ ШАШЕК (ХОД ИГРОКА) -----
 function stepaCheckersClick(row, col) {
     if (stepaGameOver || stepaTurn !== stepaPlayerColor) return;
     const isPlayerWhite = stepaPlayerColor === 'white';
@@ -1842,7 +1894,6 @@ function stepaCheckersClick(row, col) {
     stepaRenderCheckers();
 }
 
-// ----- ВЫБОР ИГРЫ -----
 document.querySelectorAll('.stepa-game-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         document.querySelectorAll('.stepa-game-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -1855,7 +1906,6 @@ document.querySelectorAll('.stepa-game-btn').forEach(function(btn) {
     });
 });
 
-// ----- СБРОС ИГРЫ (RESET) -----
 stepaReset.addEventListener('click', stepaResetAll);
 document.getElementById('stepaColor').addEventListener('change', stepaResetAll);
 document.getElementById('stepaDifficulty').addEventListener('change', function() { stepaDifficulty = this.value; stepaResetAll(); });

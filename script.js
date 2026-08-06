@@ -27,6 +27,11 @@ const DEFAULT_AVATAR = 'https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
+const ICON_LIKE = 'https://fortport.ru/photo/25465';
+const ICON_DISLIKE = 'https://fortport.ru/photo/25463';
+const ICON_COMMENT = 'https://fortport.ru/photo/25466';
+const ICON_BELL = 'https://fortport.ru/photo/25464';
+
 let profileId = localStorage.getItem('df_profile_id');
 if (!profileId) {
     profileId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -435,13 +440,13 @@ function renderPostCard(post) {
             ${mediaHTML}
             <div class="post-footer">
                 <button class="vote-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">
-                    <img src="https://fortport.ru/photo/25465" alt="лайк"> ${post.likes || 0}
+                    <img src="${ICON_LIKE}" alt="лайк" class="post-icon"> ${post.likes || 0}
                 </button>
                 <button class="vote-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">
-                    <img src="https://fortport.ru/photo/25463" alt="дизлайк"> ${post.dislikes || 0}
+                    <img src="${ICON_DISLIKE}" alt="дизлайк" class="post-icon"> ${post.dislikes || 0}
                 </button>
                 <button class="comment-btn" data-toggle="${post.id}" type="button">
-                    <img src="https://fortport.ru/photo/25466" alt="комментарии"> ${comments.length}
+                    <img src="${ICON_COMMENT}" alt="комментарии" class="post-icon"> ${comments.length}
                 </button>
             </div>
             <div class="comments-section" id="comments-${post.id}" style="display:${isOpen ? 'block' : 'none'}">
@@ -454,6 +459,10 @@ function renderPostCard(post) {
         </div>
     `;
 }
+
+// ============================================================
+// ОСТАЛЬНЫЕ ФУНКЦИИ (без изменений)
+// ============================================================
 
 function updateNotifCount() {
     const count = 0;
@@ -1196,7 +1205,6 @@ async function init() {
             </div>
         `;
     }
-    // Скрываем загрузочный экран
     const loadingScreen = document.getElementById('loadingScreen');
     if (loadingScreen) {
         loadingScreen.classList.add('hidden');
@@ -1206,7 +1214,7 @@ async function init() {
 document.addEventListener('DOMContentLoaded', init);
 
 // ============================================================
-// СТЕПАША - МИНИ-ИГРЫ
+// СТЕПАША
 // ============================================================
 
 const stepaGif = document.getElementById('stepaGif');

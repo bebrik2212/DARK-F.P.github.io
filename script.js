@@ -129,6 +129,8 @@ async function getOrCreateProfile() {
         avatarData: DEFAULT_AVATAR,
         createdAt: new Date().toISOString(),
         friends: [],
+        friendRequests: [],
+        notifications: [],
         online: true
     };
 
@@ -193,6 +195,239 @@ async function updateOnlineStatus(online) {
 }
 
 // ============================================================
+// ЗАЯВКИ В ДРУЗЬЯ
+// ============================================================
+
+async function sendFriendRequest(userId) {
+    if (!currentProfile) return false;
+    if (userId === profileId) {
+        showToast('НЕЛЬЗЯ ДОБАВИТЬ СЕБЯ', true);
+        return false;
+    }
+
+    try {
+        const userDoc = await db.collection('profiles').doc(userId).get();
+        if (!userDoc.exists) {
+            showToast('ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН', true);
+            return false;
+        }
+
+        const userData = userDoc.data();
+        const friendRequests = userData.friendRequests || [];
+        
+        if (friendRequests.some(req => req.fromId === profileId && req.status === 'pending')) {
+            showToast('ЗАЯВКА УЖЕ ОТПРАВЛЕНА', true);
+            return false;
+        }
+
+        if (userData.friends && userData.friends.includes(profileId)) {
+            showToast('ВЫ УЖЕ ДРУЗЬЯ', true);
+            return false;
+        }
+
+        friendRequests.push({
+            fromId: profileId,
+            fromName: currentProfile.nickname || 'АНОНИМ',
+            fromAvatar: currentProfile.avatarData || DEFAULT_AVATAR,
+            status: 'pending',
+            createdAt: new Date().toISOString()
+        });
+
+        await db.collection('profiles').doc(userId).update({
+            friendRequests: friendRequests
+        });
+
+        // Добавляем уведомление
+        await addNotification(userId, 'friend_request', {
+            fromId: profileId,
+            fromName: currentProfile.nickname || 'АНОНИМ'
+        });
+
+        showToast('ЗАЯВКА ОТПРАВЛЕНА');
+        return true;
+    } catch (error) {
+        console.error('Ошибка отправки заявки:', error);
+        showToast('ОШИБКА ОТПРАВКИ ЗАЯВКИ', true);
+        return false;
+    }
+}
+
+// ============================================================
+// УВЕДОМЛЕНИЯ
+// ============================================================
+
+async function addNotification(userId, type, data) {
+    try {
+        const userDoc = await db.collection('profiles').doc(userId).get();
+        if (!userDoc.exists) return;
+
+        const notifications = userDoc.data().notifications || [];
+        notifications.push({
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+            type: type,
+            data: data,
+            read: false,
+            createdAt: new Date().toISOString()
+        });
+
+        if (notifications.length > 50) {
+            notifications.splice(0, notifications.length - 50);
+        }
+
+        await db.collection('profiles').doc(userId).update({
+            notifications: notifications
+        });
+    } catch (error) {
+        console.warn('Ошибка добавления уведомления:', error);
+    }
+}
+
+async function acceptFriendRequest(fromId) {
+    if (!currentProfile) return false;
+
+    try {
+        const userDoc = await db.collection('profiles').doc(profileId).get();
+        const userData = userDoc.data();
+        
+        let friendRequests = userData.friendRequests || [];
+        const requestIndex = friendRequests.findIndex(req => req.fromId === fromId && req.status === 'pending');
+        
+        if (requestIndex === -1) {
+            showToast('ЗАЯВКА НЕ НАЙДЕНА', true);
+            return false;
+        }
+
+        friendRequests[requestIndex].status = 'accepted';
+        
+        const friends = userData.friends || [];
+        if (!friends.includes(fromId)) {
+            friends.push(fromId);
+        }
+
+        const fromDoc = await db.collection('profiles').doc(fromId).get();
+        if (fromDoc.exists) {
+            const fromData = fromDoc.data();
+            const fromFriends = fromData.friends || [];
+            if (!fromFriends.includes(profileId)) {
+                fromFriends.push(profileId);
+            }
+            await db.collection('profiles').doc(fromId).update({
+                friends: fromFriends
+            });
+        }
+
+        await db.collection('profiles').doc(profileId).update({
+            friendRequests: friendRequests,
+            friends: friends
+        });
+
+        showToast('ДРУГ ДОБАВЛЕН');
+        loadFriends();
+        loadNotifications();
+        return true;
+    } catch (error) {
+        console.error('Ошибка принятия заявки:', error);
+        showToast('ОШИБКА ПРИНЯТИЯ ЗАЯВКИ', true);
+        return false;
+    }
+}
+
+async function declineFriendRequest(fromId) {
+    if (!currentProfile) return false;
+
+    try {
+        const userDoc = await db.collection('profiles').doc(profileId).get();
+        const userData = userDoc.data();
+        
+        let friendRequests = userData.friendRequests || [];
+        friendRequests = friendRequests.filter(req => req.fromId !== fromId || req.status !== 'pending');
+
+        await db.collection('profiles').doc(profileId).update({
+            friendRequests: friendRequests
+        });
+
+        showToast('ЗАЯВКА ОТКЛОНЕНА');
+        loadNotifications();
+        return true;
+    } catch (error) {
+        console.error('Ошибка отклонения заявки:', error);
+        showToast('ОШИБКА ОТКЛОНЕНИЯ ЗАЯВКИ', true);
+        return false;
+    }
+}
+
+async function loadNotifications() {
+    if (!currentProfile) return;
+    try {
+        const doc = await db.collection('profiles').doc(profileId).get();
+        if (doc.exists) {
+            const data = doc.data();
+            const notifications = data.notifications || [];
+            const pendingRequests = (data.friendRequests || []).filter(req => req.status === 'pending');
+            
+            // Обновляем счётчик
+            const unreadCount = notifications.filter(n => !n.read).length + pendingRequests.length;
+            notifCountEl.textContent = unreadCount;
+            notifCountEl.classList.toggle('visible', unreadCount > 0);
+            
+            // Сохраняем для отображения
+            currentProfile.notifications = notifications;
+            currentProfile.friendRequests = data.friendRequests || [];
+        }
+    } catch (error) {
+        console.warn('Ошибка загрузки уведомлений:', error);
+    }
+}
+
+function renderNotifications() {
+    const notifications = currentProfile?.notifications || [];
+    const friendRequests = currentProfile?.friendRequests || [];
+    const pendingRequests = friendRequests.filter(req => req.status === 'pending');
+    
+    let html = '';
+    
+    // Заявки в друзья
+    pendingRequests.forEach(req => {
+        html += `
+            <div class="notif-item">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>👤 ${escapeHtml(req.fromName)} хочет добавить вас в друзья</span>
+                    <div>
+                        <button class="btn" onclick="acceptFriendRequest('${req.fromId}')" style="padding:2px 8px;font-size:9px;">✅</button>
+                        <button class="btn" onclick="declineFriendRequest('${req.fromId}')" style="padding:2px 8px;font-size:9px;background:rgba(255,0,0,0.1);">❌</button>
+                    </div>
+                </div>
+                <span class="notif-time">${formatDate(new Date(req.createdAt))}</span>
+            </div>
+        `;
+    });
+    
+    // Остальные уведомления
+    notifications.forEach(n => {
+        let message = '';
+        switch(n.type) {
+            case 'friend_request':
+                message = `👤 ${escapeHtml(n.data.fromName)} отправил заявку в друзья`;
+                break;
+            default:
+                message = 'Новое уведомление';
+        }
+        html += `
+            <div class="notif-item">
+                ${message}
+                <span class="notif-time">${formatDate(new Date(n.createdAt))}</span>
+            </div>
+        `;
+    });
+    
+    if (!html) {
+        html = '<div class="notif-item">НЕТ УВЕДОМЛЕНИЙ</div>';
+    }
+    
+    notificationPanelEl.innerHTML = html;
+}
+
+// ============================================================
 // ПОСТЫ
 // ============================================================
 
@@ -232,7 +467,7 @@ function subscribeToPosts() {
             }
             allPosts = posts;
             renderAllPosts();
-            updateNotifCount();
+            loadNotifications();
             if (feedCount) feedCount.textContent = posts.length;
         }, (error) => {
             console.error('Ошибка подписки:', error);
@@ -440,13 +675,13 @@ function renderPostCard(post) {
             ${mediaHTML}
             <div class="post-footer">
                 <button class="vote-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">
-                    <img src="${ICON_LIKE}" alt="лайк" class="post-icon"> ${post.likes || 0}
+                    <img src="${ICON_LIKE}" alt="лайк"> ${post.likes || 0}
                 </button>
                 <button class="vote-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">
-                    <img src="${ICON_DISLIKE}" alt="дизлайк" class="post-icon"> ${post.dislikes || 0}
+                    <img src="${ICON_DISLIKE}" alt="дизлайк"> ${post.dislikes || 0}
                 </button>
                 <button class="comment-btn" data-toggle="${post.id}" type="button">
-                    <img src="${ICON_COMMENT}" alt="комментарии" class="post-icon"> ${comments.length}
+                    <img src="${ICON_COMMENT}" alt="комментарии"> ${comments.length}
                 </button>
             </div>
             <div class="comments-section" id="comments-${post.id}" style="display:${isOpen ? 'block' : 'none'}">
@@ -461,18 +696,8 @@ function renderPostCard(post) {
 }
 
 // ============================================================
-// ОСТАЛЬНЫЕ ФУНКЦИИ (без изменений)
+// ВСПОМОГАТЕЛЬНЫЕ
 // ============================================================
-
-function updateNotifCount() {
-    const count = 0;
-    notifCountEl.textContent = count;
-    notifCountEl.classList.toggle('visible', count > 0);
-}
-
-function renderNotifications() {
-    notificationPanelEl.innerHTML = '<div class="notif-item">НЕТ УВЕДОМЛЕНИЙ</div>';
-}
 
 function escapeHtml(v) {
     const d = document.createElement('div');
@@ -524,6 +749,7 @@ async function searchUsers(query) {
             const data = doc.data();
             const isFriend = currentProfile?.friends?.includes(doc.id) || false;
             const isSelf = doc.id === profileId;
+            const hasPendingRequest = (currentProfile?.friendRequests || []).some(req => req.fromId === doc.id && req.status === 'pending');
             html += `
                 <div class="search-result-item" data-id="${doc.id}">
                     <img class="search-result-avatar" src="${data.avatarData || DEFAULT_AVATAR}">
@@ -533,12 +759,14 @@ async function searchUsers(query) {
                             ${data.online ? 'В СЕТИ' : 'ОФФЛАЙН'}
                             ${isSelf ? ' (ЭТО ВЫ)' : ''}
                             ${isFriend ? ' ДРУГ' : ''}
+                            ${hasPendingRequest ? ' ЗАЯВКА ОТПРАВЛЕНА' : ''}
                         </div>
                     </div>
-                    ${!isSelf ? `
-                        <button class="btn" data-add-friend="${doc.id}" style="font-size:9px;padding:2px 10px;">
-                            ${isFriend ? 'УДАЛИТЬ' : 'ДОБАВИТЬ'}
-                        </button>
+                    ${!isSelf && !isFriend && !hasPendingRequest ? `
+                        <button class="btn" data-send-request="${doc.id}" style="font-size:9px;padding:2px 10px;">ДОБАВИТЬ</button>
+                    ` : ''}
+                    ${!isSelf && hasPendingRequest ? `
+                        <button class="btn" style="font-size:9px;padding:2px 10px;opacity:0.5;" disabled>ОЖИДАНИЕ</button>
                     ` : ''}
                 </div>
             `;
@@ -1017,18 +1245,16 @@ document.addEventListener('click', function(e) {
         deletePost(delBtn.dataset.delete);
         return;
     }
-    const addFriendBtn = e.target.closest('[data-add-friend]');
-    if (addFriendBtn) {
-        const userId = addFriendBtn.dataset.addFriend;
-        const isFriend = currentProfile?.friends?.includes(userId);
-        if (isFriend) {
-            removeFriend(userId);
-        } else {
-            addFriend(userId);
-        }
+    
+    // Отправка заявки в друзья
+    const sendRequestBtn = e.target.closest('[data-send-request]');
+    if (sendRequestBtn) {
+        const userId = sendRequestBtn.dataset.sendRequest;
+        sendFriendRequest(userId);
         performSearch(searchInput.value);
         return;
     }
+    
     const removeFriendBtn = e.target.closest('[data-remove-friend]');
     if (removeFriendBtn) {
         if (!confirm('УДАЛИТЬ ИЗ ДРУЗЕЙ?')) return;
@@ -1112,7 +1338,7 @@ if (searchBtn) {
 }
 
 // ============================================================
-// УВЕДОМЛЕНИЯ
+// УВЕДОМЛЕНИЯ (КОЛОКОЛЬЧИК)
 // ============================================================
 
 bellBtnEl.addEventListener('click', function() {
@@ -1120,8 +1346,25 @@ bellBtnEl.addEventListener('click', function() {
     notificationPanelEl.style.display = notifOpen ? 'block' : 'none';
     if (notifOpen) {
         renderNotifications();
+        // Помечаем уведомления как прочитанные
+        if (currentProfile?.notifications) {
+            currentProfile.notifications.forEach(n => n.read = true);
+            db.collection('profiles').doc(profileId).update({
+                notifications: currentProfile.notifications
+            }).catch(() => {});
+            updateNotifCount();
+        }
     }
 });
+
+function updateNotifCount() {
+    const notifications = currentProfile?.notifications || [];
+    const friendRequests = currentProfile?.friendRequests || [];
+    const pendingRequests = friendRequests.filter(req => req.status === 'pending');
+    const unreadCount = notifications.filter(n => !n.read).length + pendingRequests.length;
+    notifCountEl.textContent = unreadCount;
+    notifCountEl.classList.toggle('visible', unreadCount > 0);
+}
 
 document.addEventListener('click', function(e) {
     if (!notifOpen) return;

@@ -264,13 +264,13 @@ body {
 }
 
 /* ============================================================
-   МЕНЮ - ВСЕ КНОПКИ С ФОНОМ
+   МЕНЮ - ВСЕ КНОПКИ С ФОНОМ И СТИЛЯМИ
    ============================================================ */
 
 .main-menu {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     padding: 8px 12px;
     background: rgba(0, 0, 0, 0.15);
     border-right: 1px solid var(--line);
@@ -283,30 +283,35 @@ body {
     align-items: center;
     padding: 8px 14px;
     border-radius: 6px;
-    color: var(--muted);
+    color: rgba(255, 255, 255, 0.15); /* 15% прозрачности белый */
     text-decoration: none;
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
     border: 1px solid transparent;
-    /* ФОН МЕНЮ */
     background-image: url('https://fortport.ru/photo/25751');
     background-size: cover !important;
     background-position: center !important;
+    background-color: rgba(0, 0, 0, 0.3); /* чуть темнее */
+    background-blend-mode: multiply;
 }
 .menu-item:hover {
-    color: white;
+    color: rgba(255, 255, 255, 0.5);
     border-color: var(--green-accent);
 }
 .menu-item.active {
-    color: white;
-    border-color: var(--green-accent);
+    color: #4fc3f7 !important; /* СИНИЙ ТЕКСТ */
+    background-color: rgba(0, 0, 0, 0.1); /* светлее фон */
+    background-blend-mode: normal;
+    border-color: #4fc3f7;
+    font-size: 13px; /* ЧУТЬ БОЛЬШЕ */
+    padding: 10px 16px; /* чуть больше отступы */
+    box-shadow: 0 0 20px rgba(79, 195, 247, 0.1);
 }
 .menu-label {
     letter-spacing: 1px;
 }
-
 /* ============================================================
    ВСЕ КНОПКИ С ФОНОМ
    ============================================================ */

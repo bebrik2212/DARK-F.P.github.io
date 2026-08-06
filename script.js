@@ -43,6 +43,7 @@ let unsubscribePosts = null;
 let chatWith = null;
 let unsubscribeChat = null;
 let searchMode = 'users';
+let searchQuery = '';
 
 // ============================================================
 // DOM
@@ -66,6 +67,7 @@ const postsListFeedEl = document.getElementById('postsListFeed');
 const postsListProfileEl = document.getElementById('postsListProfile');
 const searchInput = document.getElementById('searchInput');
 const searchResults = document.getElementById('searchResults');
+const searchBtn = document.getElementById('searchBtn');
 const friendsList = document.getElementById('friendsList');
 const addFriendBtn = document.getElementById('addFriendBtn');
 const chatModal = document.getElementById('chatModal');
@@ -74,8 +76,7 @@ const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
 const sendChatBtn = document.getElementById('sendChatBtn');
 const closeChatBtn = document.getElementById('closeChatBtn');
-const searchUsersTab = document.getElementById('searchUsersTab');
-const searchPostsTab = document.getElementById('searchPostsTab');
+const feedCount = document.getElementById('feedCount');
 
 // ============================================================
 // КЭШ
@@ -227,14 +228,14 @@ function subscribeToPosts() {
             allPosts = posts;
             renderAllPosts();
             updateNotifCount();
+            if (feedCount) feedCount.textContent = posts.length;
         }, (error) => {
             console.error('Ошибка подписки:', error);
             postsListFeedEl.innerHTML = `
-                <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
-                    <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+                <div class="empty-posts">
                     <div>ОШИБКА ПОДКЛЮЧЕНИЯ</div>
-                    <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
-                    <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:#4fc3f7;border:none;border-radius:8px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+                    <div style="font-size:0.85rem;color:#5a5d66;margin-top:8px;">${error.message}</div>
+                    <button onclick="subscribeToPosts()" style="margin-top:12px;padding:8px 20px;background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.1);border-radius:6px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
                 </div>
             `;
         });
@@ -373,10 +374,9 @@ function renderAllPosts() {
         postsListFeedEl.innerHTML = sorted.map(p => renderPostCard(p)).join('');
     } else {
         postsListFeedEl.innerHTML = `
-            <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
-                <div style="font-size:48px;margin-bottom:12px;">🌐</div>
+            <div class="empty-posts">
                 <div>ПОКА НЕТ ПОСТОВ</div>
-                <div style="font-size:0.85rem;color:#5a5d66;">БУДЬТЕ ПЕРВЫМ</div>
+                <div style="font-size:0.85rem;color:#5a5d66;margin-top:4px;">БУДЬТЕ ПЕРВЫМ</div>
             </div>
         `;
     }
@@ -386,13 +386,14 @@ function renderAllPosts() {
     } else {
         postsListProfileEl.innerHTML = '<div class="empty-posts">У ВАС НЕТ ПОСТОВ</div>';
     }
+    if (feedCount) feedCount.textContent = sorted.length;
 }
 
 function renderPostCard(post) {
     const isMine = post.authorId === profileId;
     const isAdmin = ADMIN_NICKNAMES.includes(currentProfile?.nickname);
     const canDelete = isMine || isAdmin;
-    const deleteBtn = canDelete ? `<button class="delete-post-btn" data-delete="${post.id}" type="button">✕</button>` : '';
+    const deleteBtn = canDelete ? `<button class="delete-post-btn" data-delete="${post.id}" type="button">X</button>` : '';
     let mediaHTML = '';
     if (post.media && post.media.length) {
         mediaHTML = `<div class="post-media">${post.media.map(m => {
@@ -429,15 +430,15 @@ function renderPostCard(post) {
             ${post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : ''}
             ${mediaHTML}
             <div class="post-footer">
-                <button class="vote-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">❤️ ${post.likes || 0}</button>
-                <button class="vote-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">👎 ${post.dislikes || 0}</button>
-                <button class="comment-btn" data-toggle="${post.id}" type="button">💬 ${comments.length}</button>
+                <button class="vote-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">+ ${post.likes || 0}</button>
+                <button class="vote-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">- ${post.dislikes || 0}</button>
+                <button class="comment-btn" data-toggle="${post.id}" type="button">C ${comments.length}</button>
             </div>
             <div class="comments-section" id="comments-${post.id}" style="display:${isOpen ? 'block' : 'none'}">
                 ${commentsHTML}
                 <div class="comment-input-row">
                     <input class="comment-input" id="comment-input-${post.id}" maxlength="1000" placeholder="КОММЕНТАРИЙ...">
-                    <button class="btn add-comment-btn" data-comment="${post.id}" type="button">▶</button>
+                    <button class="btn add-comment-btn" data-comment="${post.id}" type="button">></button>
                 </div>
             </div>
         </div>
@@ -516,7 +517,7 @@ async function searchUsers(query) {
                         </div>
                     </div>
                     ${!isSelf ? `
-                        <button class="btn" data-add-friend="${doc.id}" style="font-size:9px;padding:2px 8px;">
+                        <button class="btn" data-add-friend="${doc.id}" style="font-size:9px;padding:2px 10px;">
                             ${isFriend ? 'УДАЛИТЬ' : 'ДОБАВИТЬ'}
                         </button>
                     ` : ''}
@@ -585,6 +586,7 @@ async function searchPosts(query) {
 }
 
 function performSearch(query) {
+    searchQuery = query;
     if (searchMode === 'users') {
         searchUsers(query);
     } else {
@@ -619,8 +621,8 @@ async function loadFriends() {
                             </div>
                         </div>
                         <div class="friend-actions">
-                            <button class="chat-friend" data-chat="${friendId}">💬</button>
-                            <button class="remove-friend" data-remove-friend="${friendId}">✕</button>
+                            <button class="chat-friend" data-chat="${friendId}">ЧАТ</button>
+                            <button class="remove-friend" data-remove-friend="${friendId}">X</button>
                         </div>
                     </div>
                 `;
@@ -685,7 +687,7 @@ async function removeFriend(userId) {
 
 function openChat(userId, userNickname) {
     chatWith = userId;
-    chatFriendName.textContent = userNickname || 'ДРУГ';
+    chatFriendName.textContent = 'ЧАТ С ' + (userNickname || 'ДРУГОМ');
     chatModal.classList.add('open');
     loadChatMessages(userId);
 }
@@ -845,7 +847,7 @@ function renderMediaPreview() {
                     ? `<video src="${item.url}" muted></video>`
                     : `<img src="${item.url}">`}
                 <div class="preview-size">${escapeHtml(item.file.name)}</div>
-                <button class="remove-media" data-remove="${i}" type="button">✕</button>
+                <button class="remove-media" data-remove="${i}" type="button">X</button>
             </div>
         `).join('');
     } else {
@@ -905,13 +907,50 @@ publishBtnEl.addEventListener('click', async function() {
         pendingMedia = [];
         renderMediaPreview();
         updateUploadStatus();
-        setActiveTab('tabFeed', 'feedSection');
+        switchTab('feed');
     } catch (e) {
         showToast(e.message, true);
     } finally {
         this.disabled = false;
         this.textContent = 'ОПУБЛИКОВАТЬ';
     }
+});
+
+// ============================================================
+// МЕНЮ / ВКЛАДКИ
+// ============================================================
+
+const sectionMap = {
+    feed: 'feedSection',
+    search: 'searchSection',
+    friends: 'friendsSection',
+    create: 'createSection',
+    profile: 'profileSection'
+};
+
+function switchTab(tab) {
+    document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+    
+    const menuItem = document.querySelector(`.menu-item[data-tab="${tab}"]`);
+    if (menuItem) menuItem.classList.add('active');
+    
+    const section = document.getElementById(sectionMap[tab]);
+    if (section) section.classList.add('active');
+    
+    if (tab === 'friends') loadFriends();
+    if (tab === 'search') performSearch(searchInput.value);
+    if (tab === 'feed') {
+        postsListFeedEl.scrollTop = 0;
+        renderAllPosts();
+    }
+}
+
+document.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        switchTab(this.dataset.tab);
+    });
 });
 
 // ============================================================
@@ -989,12 +1028,12 @@ document.addEventListener('click', function(e) {
     const postResult = e.target.closest('[data-post]');
     if (postResult) {
         const postId = postResult.dataset.post;
-        setActiveTab('tabFeed', 'feedSection');
+        switchTab('feed');
         setTimeout(() => {
             const postEl = document.querySelector(`.post-card[data-id="${postId}"]`);
             if (postEl) {
                 postEl.scrollIntoView({ behavior: 'smooth' });
-                postEl.style.borderColor = 'var(--accent)';
+                postEl.style.borderColor = 'rgba(79,195,247,0.3)';
                 setTimeout(() => {
                     postEl.style.borderColor = '';
                 }, 3000);
@@ -1003,6 +1042,10 @@ document.addEventListener('click', function(e) {
         return;
     }
 });
+
+// ============================================================
+// КЛАВИАТУРА
+// ============================================================
 
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && e.target === chatInput) {
@@ -1015,6 +1058,10 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// ============================================================
+// ПОИСК В РЕАЛЬНОМ ВРЕМЕНИ
+// ============================================================
+
 searchInput.addEventListener('input', function() {
     clearTimeout(this._searchTimer);
     this._searchTimer = setTimeout(() => {
@@ -1022,21 +1069,32 @@ searchInput.addEventListener('input', function() {
     }, 300);
 });
 
-searchUsersTab.addEventListener('click', function() {
-    searchMode = 'users';
-    searchUsersTab.classList.add('active');
-    searchPostsTab.classList.remove('active');
-    searchInput.placeholder = 'ВВЕДИТЕ НИК ПОЛЬЗОВАТЕЛЯ...';
-    performSearch(searchInput.value);
+// ============================================================
+// ВКЛАДКИ ПОИСКА
+// ============================================================
+
+document.querySelectorAll('.search-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        searchMode = this.dataset.search;
+        performSearch(searchInput.value);
+    });
 });
 
-searchPostsTab.addEventListener('click', function() {
-    searchMode = 'posts';
-    searchPostsTab.classList.add('active');
-    searchUsersTab.classList.remove('active');
-    searchInput.placeholder = 'ВВЕДИТЕ ТЕКСТ ДЛЯ ПОИСКА...';
-    performSearch(searchInput.value);
-});
+// ============================================================
+// КНОПКА ПОИСКА
+// ============================================================
+
+if (searchBtn) {
+    searchBtn.addEventListener('click', function() {
+        performSearch(searchInput.value);
+    });
+}
+
+// ============================================================
+// УВЕДОМЛЕНИЯ
+// ============================================================
 
 bellBtnEl.addEventListener('click', function() {
     notifOpen = !notifOpen;
@@ -1053,35 +1111,24 @@ document.addEventListener('click', function(e) {
     notificationPanelEl.style.display = 'none';
 });
 
-function setActiveTab(buttonId, sectionId) {
-    document.querySelectorAll('.tabs button').forEach(btn => {
-        btn.classList.toggle('active', btn.id === buttonId);
+// ============================================================
+// КНОПКА ДОБАВИТЬ ДРУЗЕЙ
+// ============================================================
+
+if (addFriendBtn) {
+    addFriendBtn.addEventListener('click', function() {
+        switchTab('search');
+        searchMode = 'users';
+        document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('[data-search="users"]')?.classList.add('active');
+        searchInput.placeholder = 'ВВЕДИТЕ НИК ПОЛЬЗОВАТЕЛЯ...';
+        searchInput.focus();
     });
-    document.querySelectorAll('.section').forEach(section => {
-        section.classList.toggle('active', section.id === sectionId);
-    });
-    if (sectionId === 'friendsSection') {
-        loadFriends();
-    }
-    if (sectionId === 'searchSection') {
-        performSearch(searchInput.value);
-    }
 }
 
-document.getElementById('tabFeed').addEventListener('click', () => setActiveTab('tabFeed', 'feedSection'));
-document.getElementById('tabSearch').addEventListener('click', () => setActiveTab('tabSearch', 'searchSection'));
-document.getElementById('tabFriends').addEventListener('click', () => setActiveTab('tabFriends', 'friendsSection'));
-document.getElementById('tabCreate').addEventListener('click', () => setActiveTab('tabCreate', 'createSection'));
-document.getElementById('tabProfile').addEventListener('click', () => setActiveTab('tabProfile', 'profileSection'));
-
-addFriendBtn.addEventListener('click', function() {
-    setActiveTab('tabSearch', 'searchSection');
-    searchMode = 'users';
-    searchUsersTab.classList.add('active');
-    searchPostsTab.classList.remove('active');
-    searchInput.placeholder = 'ВВЕДИТЕ НИК ПОЛЬЗОВАТЕЛЯ...';
-    searchInput.focus();
-});
+// ============================================================
+// ЧАТ
+// ============================================================
 
 sendChatBtn.addEventListener('click', () => {
     sendMessage(chatInput.value);
@@ -1135,7 +1182,7 @@ async function init() {
                 <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
                 <div>ОФФЛАЙН РЕЖИМ</div>
                 <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
-                <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:#4fc3f7;border:none;border-radius:8px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+                <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.1);border-radius:6px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
             </div>
         `;
     }

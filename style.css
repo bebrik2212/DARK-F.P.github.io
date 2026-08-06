@@ -17,6 +17,9 @@
     --shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
     --radius: 12px;
     --font: 'Segoe UI', 'Tahoma', sans-serif;
+    /* НОВЫЙ ЗЕЛЁНЫЙ АКЦЕНТ */
+    --green-accent: #00cc66;
+    --green-accent2: #00994d;
 }
 
 body {
@@ -36,7 +39,7 @@ body {
 }
 
 /* ============================================================
-   ЗАГРУЗОЧНЫЙ ЭКРАН (БЕЛЫЙ, ГИФКА С ПРОПОРЦИЯМИ)
+   ЗАГРУЗОЧНЫЙ ЭКРАН
    ============================================================ */
 
 #loadingScreen {
@@ -86,7 +89,7 @@ body {
     height: 56px;
     width: auto;
     object-fit: contain;
-    filter: drop-shadow(0 0 20px rgba(79, 195, 247, 0.1));
+    filter: drop-shadow(0 0 20px rgba(0, 204, 102, 0.1));
 }
 
 /* ============================================================
@@ -126,7 +129,7 @@ body {
     font-size: 18px;
     font-weight: 300;
     letter-spacing: 6px;
-    color: var(--accent);
+    color: var(--green-accent);
 }
 .logo-sub {
     font-size: 10px;
@@ -154,9 +157,13 @@ body {
     display: grid;
     place-items: center;
     transition: all 0.2s ease;
+    /* ФОН КНОПКИ */
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
 }
 .bell:hover {
-    border-color: rgba(79, 195, 247, 0.15);
+    border-color: var(--green-accent);
 }
 .bell-icon {
     width: 22px;
@@ -184,32 +191,66 @@ body {
 }
 
 /* ============================================================
-   ПРОФИЛЬ
+   ПРОФИЛЬ (АВАТАРЫ КВАДРАТНЫЕ)
    ============================================================ */
 
-.profile-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--line);
-}
 .avatar {
     width: 44px;
     height: 44px;
-    border-radius: 50%;
+    border-radius: 4px !important; /* Квадратные */
     object-fit: cover;
     cursor: pointer;
-    border: 2px solid rgba(79, 195, 247, 0.1);
+    border: 2px solid rgba(0, 204, 102, 0.2);
     transition: all 0.2s ease;
 }
 .avatar:hover {
-    border-color: var(--accent);
+    border-color: var(--green-accent);
     transform: scale(1.05);
 }
 .avatar-input {
     display: none;
 }
+
+.post-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px !important;
+    object-fit: cover;
+}
+.comment-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px !important;
+    object-fit: cover;
+}
+#profileBigAvatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 4px !important;
+    object-fit: cover;
+    border: 2px solid rgba(0, 204, 102, 0.1);
+}
+.friend-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px !important;
+    object-fit: cover;
+}
+.search-result-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px !important;
+    object-fit: cover;
+}
+.profile-avatar-wrap {
+    position: relative;
+    display: inline-block;
+}
+
+/* ============================================================
+   НИКНЕЙМ
+   ============================================================ */
+
 .nick-wrap {
     flex: 1;
 }
@@ -226,7 +267,7 @@ body {
     transition: all 0.2s ease;
 }
 .nick-input:focus {
-    border-color: rgba(79, 195, 247, 0.15);
+    border-color: var(--green-accent);
 }
 .nick-input.error {
     border-color: var(--danger);
@@ -271,19 +312,109 @@ body {
 }
 .menu-item:hover {
     color: white;
-    background: rgba(79, 195, 247, 0.04);
+    background: rgba(0, 204, 102, 0.1);
 }
 .menu-item.active {
     color: white;
-    background: rgba(79, 195, 247, 0.06);
-    border-color: rgba(79, 195, 247, 0.08);
+    background: rgba(0, 204, 102, 0.15);
+    border-color: rgba(0, 204, 102, 0.2);
 }
 .menu-label {
     letter-spacing: 1px;
 }
 
 /* ============================================================
-   КОНТЕНТ
+   ВСЕ КНОПКИ С ФОНОМ
+   ============================================================ */
+
+.btn {
+    padding: 6px 18px;
+    border: 1px solid rgba(0, 204, 102, 0.2);
+    border-radius: 6px;
+    color: white;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    /* ФОН КНОПКИ */
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+.btn:hover {
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
+    border-color: var(--green-accent);
+    box-shadow: 0 0 30px rgba(0, 204, 102, 0.1);
+}
+.btn:disabled {
+    opacity: 0.4;
+    cursor: wait;
+}
+
+/* ============================================================
+   КНОПКИ ПОСТОВ (ЛАЙК, ДИЗЛАЙК, КОММЕНТ)
+   ============================================================ */
+
+.vote-btn, .comment-btn {
+    padding: 4px 10px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.vote-btn:hover, .comment-btn:hover {
+    background: rgba(0, 204, 102, 0.05);
+    color: white;
+}
+.vote-btn img, .comment-btn img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+.vote-btn.liked {
+    color: var(--green-accent);
+}
+.vote-btn.disliked {
+    color: var(--danger);
+}
+
+/* ============================================================
+   ПОЛЯ ВВОДА
+   ============================================================ */
+
+.search-input, .comment-input, .post-input, .chat-input {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    outline: none;
+    transition: all 0.2s ease;
+}
+.search-input:focus, .comment-input:focus, .post-input:focus, .chat-input:focus {
+    border-color: var(--green-accent);
+}
+
+/* ============================================================
+   АВАТАРКИ В ПОСТАХ
+   ============================================================ */
+
+.post-avatar, .comment-avatar, .friend-avatar, .search-result-avatar {
+    border: 1px solid rgba(0, 204, 102, 0.1);
+}
+
+/* ============================================================
+   ОСТАЛЬНЫЕ ЭЛЕМЕНТЫ БЕЗ ИЗМЕНЕНИЙ
    ============================================================ */
 
 .content {
@@ -291,7 +422,6 @@ body {
     padding: 12px 16px;
     min-height: 400px;
 }
-
 .section {
     display: none;
 }
@@ -319,11 +449,6 @@ body {
     font-size: 11px;
     color: var(--muted);
 }
-
-/* ============================================================
-   ЛЕНТА ПОСТОВ (ЧЁРНЫЙ ФОН 75%)
-   ============================================================ */
-
 .posts-list {
     display: grid;
     gap: 10px;
@@ -331,11 +456,6 @@ body {
     border-radius: 8px;
     padding: 12px;
 }
-
-/* ============================================================
-   УВЕДОМЛЕНИЯ ПАНЕЛЬ
-   ============================================================ */
-
 .notif-panel {
     display: none;
     position: absolute;
@@ -365,11 +485,6 @@ body {
     color: var(--muted);
     font-size: 9px;
 }
-
-/* ============================================================
-   ПОСТЫ
-   ============================================================ */
-
 .post-card {
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -378,7 +493,7 @@ body {
     transition: all 0.2s ease;
 }
 .post-card:hover {
-    border-color: rgba(79, 195, 247, 0.15);
+    border-color: rgba(0, 204, 102, 0.15);
 }
 .post-header {
     display: flex;
@@ -386,12 +501,6 @@ body {
     gap: 10px;
     padding: 8px 14px;
     border-bottom: 1px solid var(--line);
-}
-.post-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    object-fit: cover;
 }
 .post-nick {
     font-weight: 600;
@@ -430,50 +539,12 @@ body {
     max-height: 400px;
     object-fit: contain;
 }
-
-/* ============================================================
-   КНОПКИ (ЛАЙК, ДИЗЛАЙК, КОММЕНТАРИИ) С ИКОНКАМИ
-   ============================================================ */
-
 .post-footer {
     display: flex;
     gap: 4px;
     padding: 6px 12px;
     border-top: 1px solid var(--line);
 }
-.vote-btn, .comment-btn {
-    padding: 4px 10px;
-    border: none;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 11px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-.vote-btn:hover, .comment-btn:hover {
-    background: rgba(79, 195, 247, 0.04);
-    color: white;
-}
-.vote-btn img, .comment-btn img {
-    width: 18px;
-    height: 18px;
-    object-fit: contain;
-}
-.vote-btn.liked {
-    color: var(--accent);
-}
-.vote-btn.disliked {
-    color: var(--danger);
-}
-
-/* ============================================================
-   КОММЕНТАРИИ
-   ============================================================ */
-
 .comments-section {
     display: none;
     padding: 0 14px 14px;
@@ -485,16 +556,10 @@ body {
     padding: 6px 0;
     border-bottom: 1px solid var(--line);
 }
-.comment-avatar {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    object-fit: cover;
-}
 .comment-nick {
     font-size: 10px;
     font-weight: 600;
-    color: var(--accent);
+    color: var(--green-accent);
 }
 .comment-text {
     font-size: 11px;
@@ -508,24 +573,12 @@ body {
     flex: 1;
     height: 30px;
     padding: 0 12px;
-    background: rgba(0, 0, 0, 0.15);
-    border: 1px solid var(--line);
     border-radius: 6px;
-    color: var(--text);
-    outline: none;
-}
-.comment-input:focus {
-    border-color: rgba(79, 195, 247, 0.1);
 }
 .add-comment-btn {
     padding: 4px 12px;
     font-size: 10px;
 }
-
-/* ============================================================
-   СОЗДАНИЕ ПОСТА
-   ============================================================ */
-
 .create-post {
     position: relative;
 }
@@ -533,17 +586,8 @@ body {
     width: 100%;
     min-height: 100px;
     padding: 12px 14px;
-    background: rgba(0, 0, 0, 0.15);
-    border: 1px solid var(--line);
     border-radius: 8px;
-    color: var(--text);
-    font-size: 12px;
-    line-height: 1.6;
     resize: vertical;
-    outline: none;
-}
-.post-input:focus {
-    border-color: rgba(79, 195, 247, 0.1);
 }
 .create-actions {
     display: flex;
@@ -561,9 +605,13 @@ body {
     display: grid;
     place-items: center;
     transition: all 0.2s ease;
+    /* ФОН КНОПКИ */
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
 }
 .attach-btn:hover {
-    border-color: rgba(79, 195, 247, 0.1);
+    border-color: var(--green-accent);
 }
 .attach-btn img {
     width: 20px;
@@ -575,34 +623,18 @@ body {
     color: var(--muted);
     font-size: 10px;
 }
-.btn {
-    padding: 6px 18px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: rgba(79, 195, 247, 0.04);
-    color: white;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 1px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-.btn:hover {
-    background: rgba(79, 195, 247, 0.08);
-    border-color: rgba(79, 195, 247, 0.15);
-}
-.btn:disabled {
-    opacity: 0.4;
-    cursor: wait;
-}
 .publish-btn {
-    background: rgba(79, 195, 247, 0.08);
-    border-color: rgba(79, 195, 247, 0.1);
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
+    border-color: rgba(0, 204, 102, 0.2);
 }
 .publish-btn:hover {
-    background: rgba(79, 195, 247, 0.15);
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
+    border-color: var(--green-accent);
 }
-
 .media-preview {
     display: flex;
     flex-wrap: wrap;
@@ -640,11 +672,6 @@ body {
     font-size: 10px;
     cursor: pointer;
 }
-
-/* ============================================================
-   ПОИСК
-   ============================================================ */
-
 .search-container {
     padding: 4px 0;
 }
@@ -667,25 +694,12 @@ body {
     color: white;
 }
 .search-tab.active {
-    border-color: rgba(79, 195, 247, 0.08);
+    border-color: rgba(0, 204, 102, 0.2);
     color: white;
 }
 .search-box {
     display: flex;
     gap: 8px;
-}
-.search-input {
-    flex: 1;
-    height: 34px;
-    padding: 0 14px;
-    background: rgba(0, 0, 0, 0.15);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    color: var(--text);
-    outline: none;
-}
-.search-input:focus {
-    border-color: rgba(79, 195, 247, 0.1);
 }
 .search-btn {
     width: 34px;
@@ -695,9 +709,13 @@ body {
     background: rgba(0, 0, 0, 0.1);
     color: var(--muted);
     cursor: pointer;
+    /* ФОН КНОПКИ */
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
 }
 .search-btn:hover {
-    border-color: rgba(79, 195, 247, 0.1);
+    border-color: var(--green-accent);
 }
 .search-results {
     margin-top: 12px;
@@ -715,13 +733,7 @@ body {
     transition: all 0.2s ease;
 }
 .search-result-item:hover {
-    border-color: rgba(79, 195, 247, 0.08);
-}
-.search-result-avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    object-fit: cover;
+    border-color: rgba(0, 204, 102, 0.08);
 }
 .search-result-nick {
     font-weight: 600;
@@ -741,11 +753,11 @@ body {
     cursor: pointer;
 }
 .search-result-post:hover {
-    border-color: rgba(79, 195, 247, 0.08);
+    border-color: rgba(0, 204, 102, 0.08);
 }
 .search-result-post .post-author {
     font-weight: 600;
-    color: var(--accent);
+    color: var(--green-accent);
 }
 .search-result-post .post-content {
     margin-top: 4px;
@@ -756,11 +768,6 @@ body {
     font-size: 9px;
     color: var(--muted);
 }
-
-/* ============================================================
-   ДРУЗЬЯ
-   ============================================================ */
-
 .friends-list {
     display: grid;
     gap: 6px;
@@ -773,12 +780,6 @@ body {
     border: 1px solid var(--line);
     border-radius: 6px;
     background: var(--panel-soft);
-}
-.friend-avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    object-fit: cover;
 }
 .friend-nick {
     font-weight: 600;
@@ -803,7 +804,7 @@ body {
     font-size: 9px;
 }
 .friend-actions button:hover {
-    background: rgba(79, 195, 247, 0.04);
+    background: rgba(0, 204, 102, 0.04);
 }
 .friend-actions .remove-friend {
     border-color: rgba(255, 107, 107, 0.1);
@@ -812,25 +813,9 @@ body {
 .friend-actions .remove-friend:hover {
     background: rgba(255, 107, 107, 0.05);
 }
-
-/* ============================================================
-   ПРОФИЛЬ
-   ============================================================ */
-
 .profile-info {
     text-align: center;
     padding: 16px 0 20px;
-}
-.profile-avatar-wrap {
-    position: relative;
-    display: inline-block;
-}
-#profileBigAvatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid rgba(79, 195, 247, 0.06);
 }
 .profile-info h3 {
     margin-top: 10px;
@@ -843,11 +828,6 @@ body {
     color: var(--muted);
     font-size: 10px;
 }
-
-/* ============================================================
-   ЧАТ
-   ============================================================ */
-
 .chat-modal {
     display: none;
     position: fixed;
@@ -907,7 +887,7 @@ body {
 }
 .chat-message.mine {
     margin-left: auto;
-    background: rgba(79, 195, 247, 0.06);
+    background: rgba(0, 204, 102, 0.06);
 }
 .chat-message .msg-nick { font-size: 9px; color: var(--muted); }
 .chat-message .msg-text { font-size: 11px; }
@@ -922,20 +902,8 @@ body {
     flex: 1;
     height: 32px;
     padding: 0 12px;
-    background: rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--line);
     border-radius: 6px;
-    color: var(--text);
-    outline: none;
 }
-.chat-input:focus {
-    border-color: rgba(79, 195, 247, 0.08);
-}
-
-/* ============================================================
-   ПОДВАЛ
-   ============================================================ */
-
 .footer {
     display: flex;
     justify-content: space-between;
@@ -944,6 +912,25 @@ body {
     color: var(--muted);
     font-size: 9px;
     letter-spacing: 1px;
+}
+.toast {
+    position: fixed;
+    z-index: 50;
+    right: 20px;
+    bottom: 20px;
+    max-width: min(320px, calc(100% - 40px));
+    padding: 10px 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--shadow);
+    font-size: 11px;
+    animation: slideUp 0.25s ease;
+}
+.toast.error {
+    border-color: rgba(255, 107, 107, 0.1);
+    color: #ffb3b3;
 }
 
 /* ============================================================
@@ -955,14 +942,24 @@ body {
     bottom: 16px;
     left: 16px;
     z-index: 999;
-    cursor: pointer;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
 }
 .stepa-gif {
-    width: 100px;
-    height: 100px;
+    width: 120px !important;
+    height: 120px !important;
     object-fit: contain;
     image-rendering: pixelated;
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
     transition: transform 0.2s ease;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
 }
 #stepaWrapper:hover .stepa-gif {
     transform: scale(1.05);
@@ -1031,10 +1028,13 @@ body {
     cursor: pointer;
     font-size: 9px;
     letter-spacing: 1px;
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
 }
-.stepa-game-btn:hover { color: white; }
+.stepa-game-btn:hover { color: white; border-color: var(--green-accent); }
 .stepa-game-btn.active {
-    border-color: rgba(79, 195, 247, 0.08);
+    border-color: var(--green-accent);
     color: white;
 }
 .stepa-btns {
@@ -1050,9 +1050,12 @@ body {
     background: rgba(0, 0, 0, 0.1);
     cursor: pointer;
     padding: 4px;
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
 }
 .stepa-rps-btn:hover {
-    border-color: rgba(79, 195, 247, 0.1);
+    border-color: var(--green-accent);
 }
 .stepa-rps-btn img {
     width: 100%;
@@ -1074,9 +1077,12 @@ body {
     color: var(--text);
     font-size: 1.4rem;
     cursor: pointer;
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
 }
 .stepa-ttt button:hover {
-    border-color: rgba(79, 195, 247, 0.08);
+    border-color: var(--green-accent);
 }
 .stepa-checkers-board {
     display: grid;
@@ -1096,7 +1102,7 @@ body {
 }
 .stepa-checkers-board .white-cell { background: rgba(200, 210, 230, 0.04); }
 .stepa-checkers-board .black-cell { background: rgba(0, 0, 0, 0.2); }
-.stepa-checkers-board .selected { box-shadow: inset 0 0 0 3px var(--accent); }
+.stepa-checkers-board .selected { box-shadow: inset 0 0 0 3px var(--green-accent); }
 .stepa-checkers-board .capture-hint { box-shadow: inset 0 0 0 3px #00ff00; }
 .stepa-piece-img {
     width: 85%;
@@ -1136,38 +1142,13 @@ body {
     cursor: pointer;
     font-size: 9px;
     width: 100%;
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
 }
 .stepa-reset:hover {
-    background: rgba(79, 195, 247, 0.04);
+    border-color: var(--green-accent);
 }
-
-/* ============================================================
-   TOAST
-   ============================================================ */
-
-.toast {
-    position: fixed;
-    z-index: 50;
-    right: 20px;
-    bottom: 20px;
-    max-width: min(320px, calc(100% - 40px));
-    padding: 10px 16px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--panel);
-    backdrop-filter: blur(16px);
-    box-shadow: var(--shadow);
-    font-size: 11px;
-    animation: slideUp 0.25s ease;
-}
-.toast.error {
-    border-color: rgba(255, 107, 107, 0.1);
-    color: #ffb3b3;
-}
-
-/* ============================================================
-   АДАПТИВ
-   ============================================================ */
 
 @media (max-width: 520px) {
     body { padding: 0; }
@@ -1191,7 +1172,7 @@ body {
     .section { padding: 4px 0; }
     .posts-list { padding: 8px; }
     .chat-modal { bottom: 0; right: 0; width: 100%; max-width: 100%; max-height: 100vh; border-radius: 0; }
-    .stepa-gif { width: 64px; height: 64px; }
+    .stepa-gif { width: 80px !important; height: 80px !important; }
     .footer { font-size: 8px; padding: 6px 14px; flex-direction: column; align-items: center; gap: 4px; }
 }
 

@@ -17,7 +17,6 @@
     --shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
     --radius: 12px;
     --font: 'Segoe UI', 'Tahoma', sans-serif;
-    /* НОВЫЙ ЗЕЛЁНЫЙ АКЦЕНТ */
     --green-accent: #00cc66;
     --green-accent2: #00994d;
 }
@@ -37,10 +36,6 @@ body {
     justify-content: center;
     align-items: flex-start;
 }
-
-/* ============================================================
-   ЗАГРУЗОЧНЫЙ ЭКРАН
-   ============================================================ */
 
 #loadingScreen {
     position: fixed;
@@ -70,10 +65,6 @@ body {
     50% { transform: scale(1.1); opacity: 1; }
 }
 
-/* ============================================================
-   ЛОГОТИП В УГЛУ
-   ============================================================ */
-
 .corner-logo {
     position: fixed;
     top: 16px;
@@ -92,10 +83,6 @@ body {
     filter: drop-shadow(0 0 20px rgba(0, 204, 102, 0.1));
 }
 
-/* ============================================================
-   КОНТЕЙНЕР
-   ============================================================ */
-
 .container {
     width: min(100%, 720px);
     margin: 0 auto;
@@ -107,10 +94,6 @@ body {
     box-shadow: var(--shadow);
     overflow: hidden;
 }
-
-/* ============================================================
-   ШАПКА
-   ============================================================ */
 
 .header {
     display: flex;
@@ -142,22 +125,16 @@ body {
     gap: 12px;
 }
 
-/* ============================================================
-   УВЕДОМЛЕНИЯ
-   ============================================================ */
-
 .bell {
     position: relative;
     width: 36px;
     height: 36px;
     border: 1px solid var(--line);
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.15);
     cursor: pointer;
     display: grid;
     place-items: center;
     transition: all 0.2s ease;
-    /* ФОН КНОПКИ */
     background-image: url('https://fortport.ru/photo/25751');
     background-size: cover !important;
     background-position: center !important;
@@ -190,14 +167,22 @@ body {
     display: block;
 }
 
+.profile-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+}
+
 /* ============================================================
-   ПРОФИЛЬ (АВАТАРЫ КВАДРАТНЫЕ)
+   АВАТАРЫ КВАДРАТНЫЕ
    ============================================================ */
 
 .avatar {
     width: 44px;
     height: 44px;
-    border-radius: 4px !important; /* Квадратные */
+    border-radius: 4px !important;
     object-fit: cover;
     cursor: pointer;
     border: 2px solid rgba(0, 204, 102, 0.2);
@@ -247,10 +232,6 @@ body {
     display: inline-block;
 }
 
-/* ============================================================
-   НИКНЕЙМ
-   ============================================================ */
-
 .nick-wrap {
     flex: 1;
 }
@@ -283,7 +264,7 @@ body {
 }
 
 /* ============================================================
-   МЕНЮ (ВЕРТИКАЛЬНОЕ, СЛЕВА)
+   МЕНЮ - ВСЕ КНОПКИ С ФОНОМ
    ============================================================ */
 
 .main-menu {
@@ -309,15 +290,18 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     border: 1px solid transparent;
+    /* ФОН МЕНЮ */
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
 }
 .menu-item:hover {
     color: white;
-    background: rgba(0, 204, 102, 0.1);
+    border-color: var(--green-accent);
 }
 .menu-item.active {
     color: white;
-    background: rgba(0, 204, 102, 0.15);
-    border-color: rgba(0, 204, 102, 0.2);
+    border-color: var(--green-accent);
 }
 .menu-label {
     letter-spacing: 1px;
@@ -337,7 +321,6 @@ body {
     letter-spacing: 1px;
     cursor: pointer;
     transition: all 0.2s ease;
-    /* ФОН КНОПКИ */
     background-image: url('https://fortport.ru/photo/25751');
     background-size: cover !important;
     background-position: center !important;
@@ -345,9 +328,6 @@ body {
     -webkit-backdrop-filter: blur(4px);
 }
 .btn:hover {
-    background-image: url('https://fortport.ru/photo/25751');
-    background-size: cover !important;
-    background-position: center !important;
     border-color: var(--green-accent);
     box-shadow: 0 0 30px rgba(0, 204, 102, 0.1);
 }
@@ -357,7 +337,7 @@ body {
 }
 
 /* ============================================================
-   КНОПКИ ПОСТОВ (ЛАЙК, ДИЗЛАЙК, КОММЕНТ)
+   ОСТАЛЬНЫЕ КНОПКИ
    ============================================================ */
 
 .vote-btn, .comment-btn {
@@ -389,10 +369,6 @@ body {
     color: var(--danger);
 }
 
-/* ============================================================
-   ПОЛЯ ВВОДА
-   ============================================================ */
-
 .search-input, .comment-input, .post-input, .chat-input {
     background: rgba(0, 0, 0, 0.15);
     border: 1px solid var(--line);
@@ -404,18 +380,6 @@ body {
 .search-input:focus, .comment-input:focus, .post-input:focus, .chat-input:focus {
     border-color: var(--green-accent);
 }
-
-/* ============================================================
-   АВАТАРКИ В ПОСТАХ
-   ============================================================ */
-
-.post-avatar, .comment-avatar, .friend-avatar, .search-result-avatar {
-    border: 1px solid rgba(0, 204, 102, 0.1);
-}
-
-/* ============================================================
-   ОСТАЛЬНЫЕ ЭЛЕМЕНТЫ БЕЗ ИЗМЕНЕНИЙ
-   ============================================================ */
 
 .content {
     margin-left: 140px;
@@ -605,7 +569,6 @@ body {
     display: grid;
     place-items: center;
     transition: all 0.2s ease;
-    /* ФОН КНОПКИ */
     background-image: url('https://fortport.ru/photo/25751');
     background-size: cover !important;
     background-position: center !important;
@@ -630,9 +593,6 @@ body {
     border-color: rgba(0, 204, 102, 0.2);
 }
 .publish-btn:hover {
-    background-image: url('https://fortport.ru/photo/25751');
-    background-size: cover !important;
-    background-position: center !important;
     border-color: var(--green-accent);
 }
 .media-preview {
@@ -685,10 +645,13 @@ body {
     border: 1px solid var(--line);
     border-radius: 6px;
     background: transparent;
-    color: var(--muted);
     cursor: pointer;
     font-size: 10px;
     transition: all 0.2s ease;
+    color: var(--muted);
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
 }
 .search-tab:hover {
     color: white;
@@ -709,7 +672,6 @@ body {
     background: rgba(0, 0, 0, 0.1);
     color: var(--muted);
     cursor: pointer;
-    /* ФОН КНОПКИ */
     background-image: url('https://fortport.ru/photo/25751');
     background-size: cover !important;
     background-position: center !important;
@@ -802,9 +764,12 @@ body {
     color: var(--muted);
     cursor: pointer;
     font-size: 9px;
+    background-image: url('https://fortport.ru/photo/25751');
+    background-size: cover !important;
+    background-position: center !important;
 }
 .friend-actions button:hover {
-    background: rgba(0, 204, 102, 0.04);
+    border-color: var(--green-accent);
 }
 .friend-actions .remove-friend {
     border-color: rgba(255, 107, 107, 0.1);
@@ -1150,6 +1115,10 @@ body {
     border-color: var(--green-accent);
 }
 
+/* ============================================================
+   АДАПТИВ
+   ============================================================ */
+
 @media (max-width: 520px) {
     body { padding: 0; }
     .container { border-radius: 0; border: none; min-height: 100vh; }
@@ -1174,6 +1143,10 @@ body {
     .chat-modal { bottom: 0; right: 0; width: 100%; max-width: 100%; max-height: 100vh; border-radius: 0; }
     .stepa-gif { width: 80px !important; height: 80px !important; }
     .footer { font-size: 8px; padding: 6px 14px; flex-direction: column; align-items: center; gap: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {

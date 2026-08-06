@@ -5,27 +5,34 @@
 }
 
 :root {
-    --bg: #0a0f08;
-    --panel: rgba(10, 15, 8, 0.82);
-    --panel-soft: rgba(255, 255, 255, 0.04);
-    --line: rgba(255, 255, 255, 0.07);
+    --bg: #cfe9b8;
+    --panel: rgba(12, 14, 10, 0.86);
+    --panel-soft: rgba(255, 255, 255, 0.06);
+    --line: rgba(255, 255, 255, 0.12);
     --text: #eef7e6;
     --muted: #b9c9ae;
     --accent: #7ac13e;
     --accent2: #4c9a1a;
     --danger: #ff6b6b;
-    --shadow: 0 16px 44px rgba(0, 30, 0, 0.55);
-    --radius: 8px;
+    --shadow: 0 16px 44px rgba(0, 30, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    --radius: 16px;
     --font: 'Trebuchet MS', 'Segoe UI', 'Tahoma', sans-serif;
+    --green-accent: #7ac13e;
+    --green-accent2: #4c9a1a;
+
+    --glass-gloss: linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.06) 45%, rgba(255, 255, 255, 0) 46%, rgba(0, 0, 0, 0.12) 100%);
+    --green-gloss: linear-gradient(180deg, #b6e37e 0%, #85c94a 42%, #5aab27 46%, #3f7f16 100%);
+    --glass-base: rgba(10, 12, 8, 0.55);
 }
 
 body {
     min-height: 100vh;
     padding: 16px;
-    background: var(--bg);
-    background-image: url('https://img.goodfon.ru/wallpaper/big/b/7e/trava-zelenyy-priroda.webp');
-    background-size: cover;
-    background-position: center;
+    background:
+        radial-gradient(ellipse 90% 50% at 50% -8%, #eafcff 0%, #d3f0ff 35%, transparent 68%),
+        radial-gradient(ellipse 70% 55% at 8% 105%, rgba(64, 130, 20, 0.55), transparent 60%),
+        radial-gradient(ellipse 70% 55% at 95% 105%, rgba(64, 130, 20, 0.55), transparent 60%),
+        linear-gradient(180deg, #dff3ff 0%, #eafcea 45%, #a9dd7c 78%, #6cb043 100%);
     background-attachment: fixed;
     color: var(--text);
     font-family: var(--font);
@@ -35,23 +42,20 @@ body {
     align-items: flex-start;
     position: relative;
 }
-body::before {
+body::before,
+body::after {
     content: "";
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.35);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
+    bottom: -60px;
+    width: 55vw;
+    height: 260px;
+    background: radial-gradient(ellipse at center, rgba(58, 128, 12, 0.55), transparent 70%);
+    filter: blur(18px);
     pointer-events: none;
     z-index: 0;
 }
-
-/* ============================================================
-   ЗАГРУЗОЧНЫЙ ЭКРАН (БЕЛЫЙ)
-   ============================================================ */
+body::before { left: -10vw; }
+body::after { right: -10vw; }
 
 #loadingScreen {
     position: fixed;
@@ -61,7 +65,6 @@ body::before {
     height: 100%;
     background: #ffffff;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 9999;
@@ -82,10 +85,6 @@ body::before {
     50% { transform: scale(1.1); opacity: 1; }
 }
 
-/* ============================================================
-   ЛОГОТИП В УГЛУ (без рамки)
-   ============================================================ */
-
 .corner-logo {
     position: fixed;
     top: 16px;
@@ -93,51 +92,56 @@ body::before {
     z-index: 1000;
     cursor: pointer;
     transition: transform 0.2s ease;
-    background: transparent !important;
-    box-shadow: none !important;
     padding: 0 !important;
     border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 .corner-logo:hover {
-    transform: scale(1.06);
+    transform: scale(1.08);
 }
 .corner-logo img {
-    height: 52px;
+    height: 48px;
     width: auto;
     object-fit: contain;
-    filter: drop-shadow(0 0 20px rgba(122, 193, 62, 0.3));
+    filter: drop-shadow(0 0 14px rgba(122, 193, 62, 0.45));
     border-radius: 0 !important;
 }
-
-/* ============================================================
-   ОСНОВНОЙ КОНТЕЙНЕР
-   ============================================================ */
 
 .container {
     width: min(100%, 720px);
     margin: 0 auto;
-    background: var(--panel);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(30, 34, 26, 0.92) 0%, rgba(6, 8, 5, 0.94) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     overflow: hidden;
     position: relative;
     z-index: 1;
 }
+.container::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 90px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
+    z-index: 0;
+}
 
 /* ============================================================
-   ШАПКА С БАННЕРОМ
+   ШАПКА С БАННЕРОМ (БЕЛЫЙ ФОН)
    ============================================================ */
 
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 16px;
+    padding: 14px 20px;
     border-bottom: 1px solid var(--line);
-    background: rgba(0, 0, 0, 0.2);
+    background: #ffffff;
     position: relative;
     z-index: 1;
 }
@@ -157,30 +161,27 @@ body::before {
     gap: 12px;
 }
 
-/* ============================================================
-   УВЕДОМЛЕНИЯ
-   ============================================================ */
-
 .bell {
     position: relative;
-    width: 36px;
-    height: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
     border-radius: 4px;
     cursor: pointer;
     display: grid;
     place-items: center;
     transition: all 0.2s ease;
-    background: rgba(255, 255, 255, 0.04);
-    box-shadow: none;
+    background-color: var(--glass-base);
+    background-image: var(--glass-gloss);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 .bell:hover {
-    border-color: rgba(122, 193, 62, 0.2);
-    background: rgba(122, 193, 62, 0.06);
+    border-color: var(--green-accent);
+    box-shadow: 0 4px 14px rgba(122, 193, 62, 0.35);
 }
 .bell-icon {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     object-fit: contain;
 }
 .bell-count {
@@ -198,37 +199,29 @@ body::before {
     font-weight: bold;
     line-height: 18px;
     text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 .bell-count.visible {
     display: block;
 }
 
 /* ============================================================
-   ПРОФИЛЬ
+   АВАТАРЫ - КВАДРАТНЫЕ
    ============================================================ */
 
-.profile-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--line);
-    position: relative;
-    z-index: 1;
-}
-
 .avatar {
-    width: 40px;
-    height: 40px;
+    width: 46px;
+    height: 46px;
     border-radius: 4px !important;
     object-fit: cover;
     cursor: pointer;
-    border: 2px solid rgba(255, 255, 255, 0.06);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(122, 193, 62, 0.25);
     transition: all 0.2s ease;
 }
 .avatar:hover {
-    border-color: var(--accent);
-    transform: scale(1.04);
+    border-color: var(--green-accent);
+    transform: scale(1.06);
 }
 .avatar-input {
     display: none;
@@ -239,50 +232,66 @@ body::before {
     height: 28px;
     border-radius: 4px !important;
     object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.4);
 }
 .comment-avatar {
     width: 22px;
     height: 22px;
     border-radius: 4px !important;
     object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.4);
 }
 #profileBigAvatar {
-    width: 80px;
-    height: 80px;
+    width: 84px;
+    height: 84px;
     border-radius: 4px !important;
     object-fit: cover;
-    border: 2px solid rgba(255, 255, 255, 0.06);
+    border: 3px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45), 0 0 0 4px rgba(122, 193, 62, 0.2);
 }
 .friend-avatar {
     width: 30px;
     height: 30px;
     border-radius: 4px !important;
     object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.4);
 }
 .search-result-avatar {
     width: 30px;
     height: 30px;
     border-radius: 4px !important;
     object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
+.profile-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    z-index: 1;
+}
 .nick-wrap {
     flex: 1;
 }
 .nick-input {
     width: 100%;
-    height: 30px;
-    padding: 0 10px;
-    background: rgba(0, 0, 0, 0.25);
+    height: 32px;
+    padding: 0 12px;
+    background: rgba(0, 0, 0, 0.3);
     border: 1px solid var(--line);
     border-radius: 4px;
     color: var(--text);
     font-size: 12px;
     outline: none;
     transition: all 0.2s ease;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 .nick-input:focus {
-    border-color: var(--accent);
+    border-color: var(--green-accent);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(122, 193, 62, 0.2);
 }
 .nick-input.error {
     border-color: var(--danger);
@@ -304,11 +313,11 @@ body::before {
 .main-menu {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 8px 10px;
-    background: rgba(0, 0, 0, 0.1);
+    gap: 6px;
+    padding: 10px 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.25));
     border-right: 1px solid var(--line);
-    width: 140px;
+    width: 150px;
     float: left;
     min-height: 300px;
     position: relative;
@@ -317,87 +326,83 @@ body::before {
 .menu-item {
     display: flex;
     align-items: center;
-    padding: 7px 12px;
+    padding: 9px 14px;
     border-radius: 4px;
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.55);
     text-decoration: none;
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    border: 1px solid transparent;
+    background-color: var(--glass-base);
+    background-image: var(--glass-gloss);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 .menu-item:hover {
     color: #ffffff;
-    border-color: rgba(122, 193, 62, 0.15);
-    background: rgba(122, 193, 62, 0.04);
+    border-color: rgba(122, 193, 62, 0.6);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 0 12px rgba(122, 193, 62, 0.25);
 }
 .menu-item.active {
-    color: #ffffff !important;
-    background: rgba(122, 193, 62, 0.08);
-    border-color: rgba(122, 193, 62, 0.15);
-    font-size: 11px;
-    padding: 8px 14px;
+    color: #08260a !important;
+    background-color: transparent;
+    background-image: var(--green-gloss);
+    border-color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+    padding: 10px 16px;
+    box-shadow: 0 4px 14px rgba(76, 154, 26, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 .menu-label {
     letter-spacing: 1px;
 }
 
-.menu-item[data-tab="feed"] { border-left: 2px solid rgba(79, 195, 247, 0.2); }
-.menu-item[data-tab="feed"].active { border-left: 2px solid #4fc3f7; }
-.menu-item[data-tab="search"] { border-left: 2px solid rgba(124, 77, 255, 0.2); }
-.menu-item[data-tab="search"].active { border-left: 2px solid #7c4dff; }
-.menu-item[data-tab="friends"] { border-left: 2px solid rgba(0, 204, 102, 0.2); }
-.menu-item[data-tab="friends"].active { border-left: 2px solid #00cc66; }
-.menu-item[data-tab="create"] { border-left: 2px solid rgba(255, 152, 0, 0.2); }
-.menu-item[data-tab="create"].active { border-left: 2px solid #ff9800; }
-.menu-item[data-tab="profile"] { border-left: 2px solid rgba(255, 64, 129, 0.2); }
-.menu-item[data-tab="profile"].active { border-left: 2px solid #ff4081; }
+.menu-item[data-tab="feed"] { border-left: 3px solid #4fc3f7; }
+.menu-item[data-tab="feed"].active { border-left: 3px solid #b6e37e; }
+.menu-item[data-tab="search"] { border-left: 3px solid #7c4dff; }
+.menu-item[data-tab="search"].active { border-left: 3px solid #b6e37e; }
+.menu-item[data-tab="friends"] { border-left: 3px solid #00cc66; }
+.menu-item[data-tab="friends"].active { border-left: 3px solid #b6e37e; }
+.menu-item[data-tab="create"] { border-left: 3px solid #ff9800; }
+.menu-item[data-tab="create"].active { border-left: 3px solid #b6e37e; }
+.menu-item[data-tab="profile"] { border-left: 3px solid #ff4081; }
+.menu-item[data-tab="profile"].active { border-left: 3px solid #b6e37e; }
 
 /* ============================================================
    КНОПКИ - КВАДРАТНЫЕ ПОЛУПРОЗРАЧНЫЕ
    ============================================================ */
 
 .btn {
-    padding: 6px 16px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 7px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 4px;
-    color: var(--text);
+    color: #08260a;
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 1px;
     cursor: pointer;
     transition: all 0.2s ease;
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    background-color: transparent;
+    background-image: var(--green-gloss);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4);
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .btn:hover {
-    background: rgba(122, 193, 62, 0.06);
-    border-color: rgba(122, 193, 62, 0.1);
+    filter: brightness(1.08);
+    box-shadow: 0 6px 16px rgba(76, 154, 26, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 .btn:disabled {
     opacity: 0.4;
     cursor: wait;
 }
 
-.publish-btn {
-    background: rgba(122, 193, 62, 0.06);
-    border-color: rgba(122, 193, 62, 0.08);
-}
-.publish-btn:hover {
-    background: rgba(122, 193, 62, 0.12);
-}
-
 .vote-btn, .comment-btn {
-    padding: 4px 8px;
+    padding: 4px 10px;
     border: none;
     background: transparent;
     color: var(--muted);
@@ -410,44 +415,38 @@ body::before {
     gap: 4px;
 }
 .vote-btn:hover, .comment-btn:hover {
-    background: rgba(122, 193, 62, 0.04);
+    background: rgba(122, 193, 62, 0.12);
     color: white;
 }
 .vote-btn img, .comment-btn img {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     object-fit: contain;
 }
 .vote-btn.liked {
-    color: var(--accent);
+    color: var(--green-accent);
 }
 .vote-btn.disliked {
     color: var(--danger);
 }
 
-/* ============================================================
-   ПОЛЯ ВВОДА
-   ============================================================ */
-
 .search-input, .comment-input, .post-input, .chat-input {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.3);
     border: 1px solid var(--line);
     border-radius: 4px;
     color: var(--text);
     outline: none;
     transition: all 0.2s ease;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 .search-input:focus, .comment-input:focus, .post-input:focus, .chat-input:focus {
-    border-color: var(--accent);
+    border-color: var(--green-accent);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(122, 193, 62, 0.2);
 }
 
-/* ============================================================
-   КОНТЕНТ
-   ============================================================ */
-
 .content {
-    margin-left: 140px;
-    padding: 12px 16px;
+    margin-left: 150px;
+    padding: 14px 18px;
     min-height: 400px;
     position: relative;
     z-index: 1;
@@ -467,13 +466,14 @@ body::before {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 .section-header h2 {
     font-size: 14px;
     font-weight: 700;
     letter-spacing: 2px;
-    color: var(--accent);
+    color: var(--green-accent);
+    text-shadow: 0 0 10px rgba(122, 193, 62, 0.35);
 }
 .section-count {
     font-size: 11px;
@@ -481,16 +481,12 @@ body::before {
 }
 .posts-list {
     display: grid;
-    gap: 10px;
-    background: rgba(0, 0, 0, 0.15);
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.35);
     border: 1px solid var(--line);
     border-radius: 4px;
-    padding: 10px;
+    padding: 12px;
 }
-
-/* ============================================================
-   УВЕДОМЛЕНИЯ ПАНЕЛЬ
-   ============================================================ */
 
 .notif-panel {
     display: none;
@@ -503,7 +499,7 @@ body::before {
     overflow: auto;
     border: 1px solid var(--line);
     border-radius: 4px;
-    background: var(--panel);
+    background: linear-gradient(180deg, rgba(30, 34, 26, 0.95), rgba(6, 8, 5, 0.95));
     backdrop-filter: blur(16px);
     box-shadow: var(--shadow);
 }
@@ -522,30 +518,29 @@ body::before {
     font-size: 9px;
 }
 
-/* ============================================================
-   ПОСТЫ
-   ============================================================ */
-
 .post-card {
     border: 1px solid var(--line);
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
     overflow: hidden;
     transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 .post-card:hover {
-    border-color: rgba(122, 193, 62, 0.1);
+    border-color: rgba(122, 193, 62, 0.4);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 .post-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
+    gap: 10px;
+    padding: 8px 14px;
     border-bottom: 1px solid var(--line);
 }
 .post-nick {
     font-weight: 700;
     font-size: 11px;
+    color: var(--text);
 }
 .post-time {
     margin-left: auto;
@@ -563,10 +558,10 @@ body::before {
 }
 .delete-post-btn:hover {
     color: var(--danger);
-    background: rgba(255, 107, 107, 0.06);
+    background: rgba(255, 107, 107, 0.12);
 }
 .post-text {
-    padding: 8px 12px;
+    padding: 10px 14px;
     font-size: 12px;
     line-height: 1.6;
     white-space: pre-wrap;
@@ -583,29 +578,25 @@ body::before {
 .post-footer {
     display: flex;
     gap: 4px;
-    padding: 4px 10px;
+    padding: 6px 12px;
     border-top: 1px solid var(--line);
 }
 
-/* ============================================================
-   КОММЕНТАРИИ
-   ============================================================ */
-
 .comments-section {
     display: none;
-    padding: 0 12px 12px;
+    padding: 0 14px 14px;
     border-top: 1px solid var(--line);
 }
 .comment {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     padding: 6px 0;
     border-bottom: 1px solid var(--line);
 }
 .comment-nick {
     font-size: 10px;
     font-weight: 700;
-    color: var(--accent);
+    color: var(--green-accent);
 }
 .comment-text {
     font-size: 11px;
@@ -617,18 +608,14 @@ body::before {
 }
 .comment-input {
     flex: 1;
-    height: 30px;
-    padding: 0 10px;
+    height: 32px;
+    padding: 0 12px;
     border-radius: 4px;
 }
 .add-comment-btn {
-    padding: 4px 10px;
+    padding: 4px 12px;
     font-size: 10px;
 }
-
-/* ============================================================
-   СОЗДАНИЕ ПОСТА
-   ============================================================ */
 
 .create-post {
     position: relative;
@@ -636,20 +623,20 @@ body::before {
 .post-input {
     width: 100%;
     min-height: 100px;
-    padding: 10px 12px;
+    padding: 12px 14px;
     border-radius: 4px;
     resize: vertical;
 }
 .create-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 8px;
+    gap: 10px;
+    margin-top: 10px;
 }
 
 .attach-btn {
-    width: 40px !important;
-    height: 40px !important;
+    width: 44px !important;
+    height: 44px !important;
     border: none !important;
     background: none !important;
     cursor: pointer;
@@ -659,11 +646,11 @@ body::before {
     padding: 0 !important;
 }
 .attach-btn:hover {
-    transform: scale(1.06);
+    transform: scale(1.1);
 }
 .attach-btn img {
-    width: 30px !important;
-    height: 30px !important;
+    width: 32px !important;
+    height: 32px !important;
     object-fit: contain;
     background: transparent !important;
     border: none !important;
@@ -674,48 +661,52 @@ body::before {
     color: var(--muted);
     font-size: 10px;
 }
+.publish-btn {
+    background-color: transparent;
+    background-image: var(--green-gloss);
+    border-color: rgba(255, 255, 255, 0.45);
+}
+.publish-btn:hover {
+    filter: brightness(1.08);
+}
 
 .media-preview {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     margin-top: 8px;
 }
 .preview-item {
     position: relative;
-    width: 80px;
+    width: 90px;
     border-radius: 4px;
     overflow: hidden;
     border: 1px solid var(--line);
 }
 .preview-item img, .preview-item video {
-    width: 80px;
-    height: 60px;
+    width: 90px;
+    height: 68px;
     object-fit: cover;
 }
 .preview-size {
     padding: 4px 8px;
     font-size: 9px;
     color: var(--muted);
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.3);
 }
 .remove-media {
     position: absolute;
     top: 4px;
     right: 4px;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border: none;
     border-radius: 50%;
-    background: rgba(255, 107, 107, 0.6);
+    background: rgba(255, 107, 107, 0.75);
     color: white;
-    font-size: 9px;
+    font-size: 10px;
     cursor: pointer;
 }
-
-/* ============================================================
-   ПОИСК
-   ============================================================ */
 
 .search-container {
     padding: 4px 0;
@@ -726,14 +717,15 @@ body::before {
     margin-bottom: 10px;
 }
 .search-tab {
-    padding: 4px 12px;
+    padding: 5px 14px;
     border: 1px solid var(--line);
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
+    background-color: var(--glass-base);
     cursor: pointer;
     font-size: 10px;
     transition: all 0.2s ease;
     color: var(--muted);
+    background-image: var(--glass-gloss);
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -743,25 +735,28 @@ body::before {
     color: white;
 }
 .search-tab.active {
-    background: rgba(122, 193, 62, 0.06);
-    border-color: rgba(122, 193, 62, 0.1);
-    color: white;
+    background-image: var(--green-gloss);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #08260a;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 .search-box {
     display: flex;
     gap: 8px;
 }
 .search-btn {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     border: 1px solid var(--line);
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
+    background-color: var(--glass-base);
     color: var(--muted);
     cursor: pointer;
+    background-image: var(--glass-gloss);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .search-btn:hover {
-    border-color: var(--accent);
+    border-color: var(--green-accent);
 }
 .search-results {
     margin-top: 12px;
@@ -769,17 +764,17 @@ body::before {
 .search-result-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 12px;
+    gap: 12px;
+    padding: 8px 14px;
     border: 1px solid var(--line);
     border-radius: 4px;
     margin-bottom: 6px;
-    background: rgba(255, 255, 255, 0.02);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
     cursor: pointer;
     transition: all 0.2s ease;
 }
 .search-result-item:hover {
-    border-color: rgba(122, 193, 62, 0.08);
+    border-color: rgba(122, 193, 62, 0.35);
 }
 .search-result-nick {
     font-weight: 700;
@@ -791,19 +786,19 @@ body::before {
 }
 .search-result-status.online { color: #7ac13e; }
 .search-result-post {
-    padding: 8px 12px;
+    padding: 10px 14px;
     border: 1px solid var(--line);
     border-radius: 4px;
     margin-bottom: 6px;
-    background: rgba(255, 255, 255, 0.02);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
     cursor: pointer;
 }
 .search-result-post:hover {
-    border-color: rgba(122, 193, 62, 0.08);
+    border-color: rgba(122, 193, 62, 0.35);
 }
 .search-result-post .post-author {
     font-weight: 700;
-    color: var(--accent);
+    color: var(--green-accent);
 }
 .search-result-post .post-content {
     margin-top: 4px;
@@ -815,22 +810,18 @@ body::before {
     color: var(--muted);
 }
 
-/* ============================================================
-   ДРУЗЬЯ
-   ============================================================ */
-
 .friends-list {
     display: grid;
-    gap: 6px;
+    gap: 8px;
 }
 .friend-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 12px;
+    gap: 12px;
+    padding: 8px 14px;
     border: 1px solid var(--line);
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
 }
 .friend-nick {
     font-weight: 700;
@@ -846,43 +837,41 @@ body::before {
     gap: 4px;
 }
 .friend-actions button {
-    padding: 2px 8px;
+    padding: 3px 10px;
     border: 1px solid var(--line);
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
+    background-color: var(--glass-base);
     color: var(--muted);
     cursor: pointer;
     font-size: 9px;
+    background-image: var(--glass-gloss);
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .friend-actions button:hover {
-    border-color: var(--accent);
+    border-color: var(--green-accent);
 }
 .friend-actions .remove-friend {
-    border-color: rgba(255, 107, 107, 0.1);
+    border-color: rgba(255, 107, 107, 0.3);
     color: var(--danger);
 }
 .friend-actions .remove-friend:hover {
-    background: rgba(255, 107, 107, 0.04);
+    background: rgba(255, 107, 107, 0.12);
 }
-
-/* ============================================================
-   ПРОФИЛЬ
-   ============================================================ */
 
 .profile-info {
     text-align: center;
-    padding: 16px 0 20px;
+    padding: 18px 0 22px;
 }
 .profile-info h3 {
     margin-top: 10px;
     font-size: 16px;
     font-weight: 700;
     letter-spacing: 2px;
-    color: var(--accent);
+    color: var(--green-accent);
+    text-shadow: 0 0 10px rgba(122, 193, 62, 0.35);
 }
 .profile-info p {
     margin-top: 4px;
@@ -890,22 +879,18 @@ body::before {
     font-size: 10px;
 }
 
-/* ============================================================
-   ЧАТ
-   ============================================================ */
-
 .chat-modal {
     display: none;
     position: fixed;
     z-index: 100;
     bottom: 20px;
     right: 20px;
-    width: 320px;
+    width: 340px;
     max-width: calc(100% - 40px);
-    max-height: 440px;
+    max-height: 460px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: var(--panel);
+    background: linear-gradient(180deg, rgba(30, 34, 26, 0.95), rgba(6, 8, 5, 0.95));
     backdrop-filter: blur(16px);
     box-shadow: var(--shadow);
     flex-direction: column;
@@ -921,13 +906,13 @@ body::before {
 .chat-header {
     display: flex;
     justify-content: space-between;
-    padding: 8px 14px;
+    padding: 10px 16px;
     border-bottom: 1px solid var(--line);
 }
 .chat-header span {
     font-size: 12px;
     font-weight: 700;
-    color: var(--accent);
+    color: var(--green-accent);
 }
 .close-chat {
     background: none;
@@ -939,22 +924,22 @@ body::before {
 .close-chat:hover { color: var(--danger); }
 .chat-messages {
     flex: 1;
-    padding: 10px;
+    padding: 12px;
     overflow-y: auto;
     min-height: 180px;
     max-height: 260px;
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.2);
 }
 .chat-message {
     margin-bottom: 6px;
-    padding: 6px 10px;
+    padding: 6px 12px;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.06);
     max-width: 80%;
 }
 .chat-message.mine {
     margin-left: auto;
-    background: rgba(122, 193, 62, 0.04);
+    background: rgba(122, 193, 62, 0.14);
 }
 .chat-message .msg-nick { font-size: 9px; color: var(--muted); }
 .chat-message .msg-text { font-size: 11px; }
@@ -962,24 +947,20 @@ body::before {
 .chat-input-row {
     display: flex;
     gap: 8px;
-    padding: 8px 14px;
+    padding: 8px 16px;
     border-top: 1px solid var(--line);
 }
 .chat-input {
     flex: 1;
-    height: 30px;
-    padding: 0 10px;
+    height: 32px;
+    padding: 0 12px;
     border-radius: 4px;
 }
-
-/* ============================================================
-   ПОДВАЛ
-   ============================================================ */
 
 .footer {
     display: flex;
     justify-content: space-between;
-    padding: 8px 16px;
+    padding: 10px 20px;
     border-top: 1px solid var(--line);
     color: var(--muted);
     font-size: 9px;
@@ -988,33 +969,25 @@ body::before {
     z-index: 1;
 }
 
-/* ============================================================
-   TOAST
-   ============================================================ */
-
 .toast {
     position: fixed;
     z-index: 50;
     right: 20px;
     bottom: 20px;
     max-width: min(320px, calc(100% - 40px));
-    padding: 10px 14px;
+    padding: 10px 16px;
     border: 1px solid var(--line);
     border-radius: 4px;
-    background: var(--panel);
+    background: linear-gradient(180deg, rgba(30, 34, 26, 0.95), rgba(6, 8, 5, 0.95));
     backdrop-filter: blur(16px);
     box-shadow: var(--shadow);
     font-size: 11px;
     animation: slideUp 0.25s ease;
 }
 .toast.error {
-    border-color: rgba(255, 107, 107, 0.15);
+    border-color: rgba(255, 107, 107, 0.35);
     color: #ffb3b3;
 }
-
-/* ============================================================
-   СТЕПАША
-   ============================================================ */
 
 #stepaWrapper {
     position: fixed;
@@ -1039,7 +1012,7 @@ body::before {
     cursor: grab;
     user-select: none;
     -webkit-user-select: none;
-    filter: drop-shadow(0 8px 16px rgba(0, 40, 0, 0.2));
+    filter: drop-shadow(0 8px 16px rgba(0, 40, 0, 0.4));
 }
 #stepaWrapper:hover .stepa-gif {
     transform: scale(1.05);
@@ -1052,13 +1025,13 @@ body::before {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    max-width: 380px;
+    max-width: 400px;
     width: calc(100% - 40px);
     max-height: 80vh;
     overflow-y: auto;
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    background: var(--panel);
+    background: linear-gradient(180deg, rgba(30, 34, 26, 0.96), rgba(6, 8, 5, 0.96));
     backdrop-filter: blur(20px);
     box-shadow: var(--shadow);
 }
@@ -1069,11 +1042,11 @@ body::before {
 .stepa-modal-header {
     display: flex;
     justify-content: space-between;
-    padding: 8px 14px;
+    padding: 10px 16px;
     border-bottom: 1px solid var(--line);
 }
 .stepa-modal-header span {
-    color: var(--accent);
+    color: var(--green-accent);
     font-weight: 700;
 }
 .stepa-modal-close {
@@ -1085,44 +1058,45 @@ body::before {
 }
 .stepa-modal-close:hover { color: var(--danger); }
 .stepa-modal-body {
-    padding: 14px;
+    padding: 16px;
 }
 .stepa-phrase {
     text-align: center;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     padding: 8px;
-    margin-bottom: 12px;
-    background: rgba(0, 0, 0, 0.1);
+    margin-bottom: 14px;
+    background: rgba(0, 0, 0, 0.25);
     border-radius: 4px;
     letter-spacing: 2px;
-    color: var(--accent);
+    color: var(--green-accent);
 }
 .stepa-game-select {
     display: flex;
     gap: 4px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 .stepa-game-btn {
     flex: 1;
-    padding: 4px 8px;
+    padding: 5px 8px;
     border: 1px solid var(--line);
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
+    background-color: var(--glass-base);
     color: var(--muted);
     cursor: pointer;
     font-size: 9px;
     letter-spacing: 1px;
+    background-image: var(--glass-gloss);
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.stepa-game-btn:hover { color: white; border-color: var(--accent); }
+.stepa-game-btn:hover { color: white; border-color: var(--green-accent); }
 .stepa-game-btn.active {
-    background: rgba(122, 193, 62, 0.06);
-    border-color: rgba(122, 193, 62, 0.1);
-    color: white;
+    background-image: var(--green-gloss);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #08260a;
 }
 .stepa-btns {
     display: flex;
@@ -1130,18 +1104,148 @@ body::before {
     justify-content: center;
 }
 .stepa-rps-btn {
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
     border: 1px solid var(--line);
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
+    background-color: var(--glass-base);
     cursor: pointer;
     padding: 6px;
+    background-image: var(--glass-gloss);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .stepa-rps-btn:hover {
-    border-color: var(--accent);
+    border-color: var(--green-accent);
 }
 .stepa-rps-btn img {
     width: 100%;
     height: 100%;
-    object-fit:
+    object-fit: contain;
+}
+.stepa-ttt {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    max-width: 180px;
+    margin: 0 auto;
+}
+.stepa-ttt button {
+    aspect-ratio: 1;
+    background-color: var(--glass-base);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 1.4rem;
+    cursor: pointer;
+    background-image: var(--glass-gloss);
+}
+.stepa-ttt button:hover {
+    border-color: var(--green-accent);
+}
+.stepa-checkers-board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 0;
+    max-width: 220px;
+    margin: 0 auto;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.stepa-checkers-board button {
+    aspect-ratio: 1;
+    cursor: pointer;
+    border: none;
+    padding: 2px;
+}
+.stepa-checkers-board .white-cell { background: rgba(220, 235, 200, 0.1); }
+.stepa-checkers-board .black-cell { background: rgba(0, 0, 0, 0.35); }
+.stepa-checkers-board .selected { box-shadow: inset 0 0 0 3px var(--green-accent); }
+.stepa-checkers-board .capture-hint { box-shadow: inset 0 0 0 3px #b6e37e; }
+.stepa-piece-img {
+    width: 85%;
+    height: 85%;
+    object-fit: contain;
+}
+.stepa-checkers-settings {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin: 6px 0 10px;
+    font-size: 9px;
+    color: var(--muted);
+}
+.stepa-checkers-settings select {
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 2px 8px;
+}
+.stepa-status {
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    margin-top: 8px;
+}
+.stepa-bot-say { font-size: 10px; color: var(--muted); }
+.stepa-result { font-size: 13px; font-weight: 700; margin-top: 2px; color: var(--green-accent); }
+.stepa-reset {
+    margin-top: 8px;
+    padding: 7px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 4px;
+    background-color: transparent;
+    color: #08260a;
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 700;
+    width: 100%;
+    background-image: var(--green-gloss);
+}
+.stepa-reset:hover {
+    filter: brightness(1.08);
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.15);
+}
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #b6e37e, #4c9a1a);
+    border-radius: 10px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 520px) {
+    body { padding: 0; }
+    .container { border-radius: 0; border: none; min-height: 100vh; }
+    .header { padding: 10px 14px; }
+    .logo-text { font-size: 14px; letter-spacing: 4px; }
+    .corner-logo img { height: 36px; }
+    .main-menu {
+        flex-direction: row;
+        width: 100%;
+        float: none;
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+        padding: 4px 8px;
+        gap: 2px;
+        overflow-x: auto;
+        min-height: auto;
+    }
+    .menu-item { padding: 4px 10px; font-size: 9px; white-space: nowrap; }
+    .content { margin-left: 0; padding: 10px 12px; }
+    .section { padding: 4px 0; }
+    .posts-list { padding: 8px; }
+    .chat-modal { bottom: 0; right: 0; width: 100%; max-width: 100%; max-height: 100vh; border-radius: 0; }
+    .stepa-gif { width: 80px !important; height: 80px !important; }
+    .footer { font-size: 8px; padding: 6px 14px; flex-direction: column; align-items: center; gap: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}

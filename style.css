@@ -1,16 +1,6 @@
-:root {
-    --bg: #0a0a1a;
-    --panel: rgba(15, 20, 45, 0.8);
-    --panel-soft: rgba(25, 30, 55, 0.6);
-    --line: rgba(100, 180, 255, 0.1);
-    --text: #e0e8f0;
-    --muted: #7a8aa0;
-    --accent: #4fc3f7;
-    --accent2: #7c4dff;
-    --danger: #ff6b6b;
-    --shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-    --radius: 12px;
-}
+/* ============================================================
+   БАЗОВЫЙ СТИЛЬ
+   ============================================================ */
 
 * {
     box-sizing: border-box;
@@ -18,15 +8,31 @@
     padding: 0;
 }
 
+:root {
+    --bg: #0a0a1a;
+    --panel: rgba(15, 20, 45, 0.85);
+    --panel-soft: rgba(25, 30, 55, 0.7);
+    --line: rgba(100, 180, 255, 0.08);
+    --text: #e0e8f0;
+    --muted: #7a8aa0;
+    --accent: #4fc3f7;
+    --accent2: #7c4dff;
+    --danger: #ff6b6b;
+    --shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+    --radius: 12px;
+    --font: 'Segoe UI', 'Tahoma', sans-serif;
+}
+
 body {
     min-height: 100vh;
     padding: 16px;
     background: var(--bg);
-    background-image: 
-        radial-gradient(ellipse at 20% 50%, rgba(79, 195, 247, 0.06) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 20%, rgba(124, 77, 255, 0.04) 0%, transparent 50%);
+    background-image: url('https://avatars.mds.yandex.net/i?id=0480fe11e075d96ebbacc9f591432100_l-13053828-images-thumbs&n=13');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
     color: var(--text);
-    font-family: 'Segoe UI', 'Tahoma', sans-serif;
+    font-family: var(--font);
     font-size: 12px;
     display: flex;
     justify-content: center;
@@ -72,16 +78,16 @@ body {
     width: min(100%, 720px);
     margin: 0 auto;
     background: var(--panel);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(79, 195, 247, 0.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     overflow: hidden;
 }
 
 /* ============================================================
-   ШАПКА (как на сайте)
+   ШАПКА
    ============================================================ */
 
 .header {
@@ -89,24 +95,19 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 12px 20px;
-    border-bottom: 1px solid rgba(79, 195, 247, 0.04);
-    background: rgba(0, 0, 0, 0.15);
+    border-bottom: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.2);
 }
 .logo {
     display: flex;
     align-items: baseline;
     gap: 4px;
 }
-.logo-icon {
-    color: var(--accent);
-    font-size: 16px;
-}
 .logo-text {
     font-size: 18px;
     font-weight: 300;
     letter-spacing: 6px;
     color: var(--accent);
-    text-shadow: 0 0 30px rgba(79, 195, 247, 0.1);
 }
 .logo-sub {
     font-size: 10px;
@@ -118,11 +119,16 @@ body {
     align-items: center;
     gap: 12px;
 }
+
+/* ============================================================
+   УВЕДОМЛЕНИЯ
+   ============================================================ */
+
 .bell {
     position: relative;
     width: 36px;
     height: 36px;
-    border: 1px solid rgba(79, 195, 247, 0.06);
+    border: 1px solid var(--line);
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.15);
     color: var(--muted);
@@ -136,7 +142,9 @@ body {
     color: white;
 }
 .bell-icon {
-    font-size: 16px;
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
 }
 .bell-count {
     position: absolute;
@@ -167,7 +175,7 @@ body {
     align-items: center;
     gap: 14px;
     padding: 12px 20px;
-    border-bottom: 1px solid rgba(79, 195, 247, 0.04);
+    border-bottom: 1px solid var(--line);
 }
 .avatar-wrap {
     position: relative;
@@ -185,21 +193,6 @@ body {
     border-color: var(--accent);
     transform: scale(1.05);
 }
-.avatar-glow {
-    position: absolute;
-    top: -4px;
-    left: -4px;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(79, 195, 247, 0.08), transparent 70%);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-.avatar-wrap:hover .avatar-glow {
-    opacity: 1;
-}
 .avatar-input {
     display: none;
 }
@@ -211,7 +204,7 @@ body {
     height: 30px;
     padding: 0 12px;
     background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(79, 195, 247, 0.06);
+    border: 1px solid var(--line);
     border-radius: 6px;
     color: var(--text);
     font-size: 12px;
@@ -235,22 +228,24 @@ body {
 }
 
 /* ============================================================
-   МЕНЮ (как на сайте — кнопки-ссылки с иконками)
+   МЕНЮ (ВЕРТИКАЛЬНОЕ, СЛЕВА)
    ============================================================ */
 
 .main-menu {
     display: flex;
+    flex-direction: column;
     gap: 2px;
-    padding: 6px 16px;
-    background: rgba(0, 0, 0, 0.1);
-    border-bottom: 1px solid rgba(79, 195, 247, 0.04);
-    flex-wrap: wrap;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.15);
+    border-right: 1px solid var(--line);
+    width: 140px;
+    float: left;
+    min-height: 300px;
 }
 .menu-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
+    padding: 8px 14px;
     border-radius: 6px;
     color: var(--muted);
     text-decoration: none;
@@ -269,30 +264,30 @@ body {
     background: rgba(79, 195, 247, 0.06);
     border-color: rgba(79, 195, 247, 0.08);
 }
-.menu-icon {
-    font-size: 14px;
-}
 .menu-label {
     letter-spacing: 1px;
 }
 
 /* ============================================================
-   СЕКЦИИ
+   КОНТЕНТ
    ============================================================ */
 
+.content {
+    margin-left: 140px;
+    padding: 12px 16px;
+    min-height: 400px;
+}
 .section {
     display: none;
-    padding: 16px 20px;
 }
 .section.active {
     display: block;
-    animation: fadeIn 0.25s ease;
+    animation: fadeIn 0.2s ease;
 }
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
 }
-
 .section-header {
     display: flex;
     justify-content: space-between;
@@ -311,7 +306,7 @@ body {
 }
 
 /* ============================================================
-   УВЕДОМЛЕНИЯ
+   УВЕДОМЛЕНИЯ ПАНЕЛЬ
    ============================================================ */
 
 .notif-panel {
@@ -323,7 +318,7 @@ body {
     width: min(320px, calc(100% - 40px));
     max-height: 280px;
     overflow: auto;
-    border: 1px solid rgba(79, 195, 247, 0.06);
+    border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--panel);
     backdrop-filter: blur(16px);
@@ -331,7 +326,7 @@ body {
 }
 .notif-item {
     padding: 10px 14px;
-    border-bottom: 1px solid rgba(79, 195, 247, 0.04);
+    border-bottom: 1px solid var(--line);
     font-size: 11px;
 }
 .notif-item:last-child {
@@ -358,24 +353,22 @@ body {
     color: var(--muted);
     font-size: 11px;
 }
-
 .post-card {
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--panel-soft);
-    backdrop-filter: blur(4px);
     overflow: hidden;
     transition: all 0.2s ease;
 }
 .post-card:hover {
-    border-color: rgba(79, 195, 247, 0.08);
+    border-color: rgba(79, 195, 247, 0.15);
 }
 .post-header {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 8px 14px;
-    border-bottom: 1px solid rgba(79, 195, 247, 0.04);
+    border-bottom: 1px solid var(--line);
 }
 .post-avatar {
     width: 28px;
@@ -420,11 +413,16 @@ body {
     max-height: 400px;
     object-fit: contain;
 }
+
+/* ============================================================
+   КНОПКИ (ЛАЙК, ДИЗЛАЙК, КОММЕНТАРИИ)
+   ============================================================ */
+
 .post-footer {
     display: flex;
     gap: 4px;
     padding: 6px 12px;
-    border-top: 1px solid rgba(79, 195, 247, 0.04);
+    border-top: 1px solid var(--line);
 }
 .vote-btn, .comment-btn {
     padding: 4px 10px;
@@ -435,24 +433,40 @@ body {
     font-size: 11px;
     border-radius: 4px;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 .vote-btn:hover, .comment-btn:hover {
     background: rgba(79, 195, 247, 0.04);
     color: white;
 }
-.vote-btn.liked { color: var(--accent); }
-.vote-btn.disliked { color: var(--danger); }
+.vote-btn img, .comment-btn img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+.vote-btn.liked {
+    color: var(--accent);
+}
+.vote-btn.disliked {
+    color: var(--danger);
+}
+
+/* ============================================================
+   КОММЕНТАРИИ
+   ============================================================ */
 
 .comments-section {
     display: none;
     padding: 0 14px 14px;
-    border-top: 1px solid rgba(79, 195, 247, 0.04);
+    border-top: 1px solid var(--line);
 }
 .comment {
     display: flex;
     gap: 10px;
     padding: 6px 0;
-    border-bottom: 1px solid rgba(79, 195, 247, 0.04);
+    border-bottom: 1px solid var(--line);
 }
 .comment-avatar {
     width: 22px;
@@ -478,7 +492,7 @@ body {
     height: 30px;
     padding: 0 12px;
     background: rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     color: var(--text);
     outline: none;
@@ -503,7 +517,7 @@ body {
     min-height: 100px;
     padding: 12px 14px;
     background: rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 8px;
     color: var(--text);
     font-size: 12px;
@@ -523,7 +537,7 @@ body {
 .attach-btn {
     width: 34px;
     height: 34px;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.1);
     cursor: pointer;
@@ -546,7 +560,7 @@ body {
 }
 .btn {
     padding: 6px 18px;
-    border: 1px solid rgba(79, 195, 247, 0.08);
+    border: 1px solid var(--line);
     border-radius: 6px;
     background: rgba(79, 195, 247, 0.04);
     color: white;
@@ -583,7 +597,7 @@ body {
     width: 90px;
     border-radius: 6px;
     overflow: hidden;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
 }
 .preview-item img, .preview-item video {
     width: 90px;
@@ -624,7 +638,7 @@ body {
 }
 .search-tab {
     padding: 4px 14px;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     background: transparent;
     color: var(--muted);
@@ -648,7 +662,7 @@ body {
     height: 34px;
     padding: 0 14px;
     background: rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     color: var(--text);
     outline: none;
@@ -659,7 +673,7 @@ body {
 .search-btn {
     width: 34px;
     height: 34px;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     background: rgba(0, 0, 0, 0.1);
     color: var(--muted);
@@ -671,13 +685,12 @@ body {
 .search-results {
     margin-top: 12px;
 }
-
 .search-result-item {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 8px 14px;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     margin-bottom: 6px;
     background: var(--panel-soft);
@@ -702,10 +715,9 @@ body {
     color: var(--muted);
 }
 .search-result-status.online { color: #4caf50; }
-
 .search-result-post {
     padding: 10px 14px;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     margin-bottom: 6px;
     background: var(--panel-soft);
@@ -741,7 +753,7 @@ body {
     align-items: center;
     gap: 12px;
     padding: 8px 14px;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     background: var(--panel-soft);
 }
@@ -766,7 +778,7 @@ body {
 }
 .friend-actions button {
     padding: 2px 10px;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 4px;
     background: transparent;
     color: var(--muted);
@@ -803,16 +815,6 @@ body {
     object-fit: cover;
     border: 2px solid rgba(79, 195, 247, 0.06);
 }
-.profile-avatar-glow {
-    position: absolute;
-    top: -6px;
-    left: -6px;
-    width: 92px;
-    height: 92px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(79, 195, 247, 0.06), transparent 70%);
-    pointer-events: none;
-}
 .profile-info h3 {
     margin-top: 10px;
     font-size: 16px;
@@ -838,7 +840,7 @@ body {
     width: 340px;
     max-width: calc(100% - 40px);
     max-height: 460px;
-    border: 1px solid rgba(79, 195, 247, 0.06);
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--panel);
     backdrop-filter: blur(16px);
@@ -857,7 +859,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 8px 16px;
-    border-bottom: 1px solid rgba(79, 195, 247, 0.04);
+    border-bottom: 1px solid var(--line);
 }
 .chat-header span {
     font-size: 12px;
@@ -868,6 +870,7 @@ body {
     border: none;
     color: var(--muted);
     cursor: pointer;
+    font-size: 16px;
 }
 .close-chat:hover { color: var(--danger); }
 .chat-messages {
@@ -896,14 +899,14 @@ body {
     display: flex;
     gap: 8px;
     padding: 8px 16px;
-    border-top: 1px solid rgba(79, 195, 247, 0.04);
+    border-top: 1px solid var(--line);
 }
 .chat-input {
     flex: 1;
     height: 32px;
     padding: 0 12px;
     background: rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     color: var(--text);
     outline: none;
@@ -920,7 +923,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 8px 20px;
-    border-top: 1px solid rgba(79, 195, 247, 0.04);
+    border-top: 1px solid var(--line);
     color: var(--muted);
     font-size: 9px;
     letter-spacing: 1px;
@@ -938,29 +941,14 @@ body {
     cursor: pointer;
 }
 .stepa-gif {
-    width: 72px;
-    height: 72px;
+    width: 100px;
+    height: 100px;
     object-fit: contain;
     image-rendering: pixelated;
     transition: transform 0.2s ease;
 }
 #stepaWrapper:hover .stepa-gif {
     transform: scale(1.05);
-}
-.stepa-glow {
-    position: absolute;
-    top: -6px;
-    left: -6px;
-    width: 84px;
-    height: 84px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(79, 195, 247, 0.06), transparent 70%);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-#stepaWrapper:hover .stepa-glow {
-    opacity: 1;
 }
 
 .stepa-modal {
@@ -974,7 +962,7 @@ body {
     width: calc(100% - 40px);
     max-height: 80vh;
     overflow-y: auto;
-    border: 1px solid rgba(79, 195, 247, 0.06);
+    border: 1px solid var(--line);
     border-radius: var(--radius);
     background: rgba(10, 15, 40, 0.92);
     backdrop-filter: blur(20px);
@@ -988,13 +976,14 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 8px 16px;
-    border-bottom: 1px solid rgba(79, 195, 247, 0.04);
+    border-bottom: 1px solid var(--line);
 }
 .stepa-modal-close {
     background: none;
     border: none;
     color: var(--muted);
     cursor: pointer;
+    font-size: 16px;
 }
 .stepa-modal-close:hover { color: var(--danger); }
 .stepa-modal-body {
@@ -1018,7 +1007,7 @@ body {
 .stepa-game-btn {
     flex: 1;
     padding: 4px 8px;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     background: transparent;
     color: var(--muted);
@@ -1039,7 +1028,7 @@ body {
 .stepa-rps-btn {
     width: 50px;
     height: 50px;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     background: rgba(0, 0, 0, 0.1);
     cursor: pointer;
@@ -1063,7 +1052,7 @@ body {
 .stepa-ttt button {
     aspect-ratio: 1;
     background: rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     color: var(--text);
     font-size: 1.4rem;
@@ -1078,7 +1067,7 @@ body {
     gap: 0;
     max-width: 220px;
     margin: 0 auto;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     overflow: hidden;
 }
@@ -1108,7 +1097,7 @@ body {
 .stepa-checkers-settings select {
     background: rgba(0, 0, 0, 0.1);
     color: var(--text);
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 4px;
     padding: 2px 8px;
 }
@@ -1123,7 +1112,7 @@ body {
 .stepa-reset {
     margin-top: 8px;
     padding: 6px 16px;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 6px;
     background: transparent;
     color: var(--text);
@@ -1146,7 +1135,7 @@ body {
     bottom: 20px;
     max-width: min(320px, calc(100% - 40px));
     padding: 10px 16px;
-    border: 1px solid rgba(79, 195, 247, 0.04);
+    border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--panel);
     backdrop-filter: blur(16px);
@@ -1168,14 +1157,23 @@ body {
     .container { border-radius: 0; border: none; min-height: 100vh; }
     .header { padding: 10px 14px; }
     .logo-text { font-size: 14px; letter-spacing: 4px; }
-    .main-menu { padding: 4px 8px; gap: 2px; }
-    .menu-item { padding: 4px 10px; font-size: 10px; }
-    .menu-label { font-size: 8px; letter-spacing: 0; }
-    .section { padding: 12px 14px; }
-    .profile-row { padding: 10px 14px; }
+    .main-menu {
+        flex-direction: row;
+        width: 100%;
+        float: none;
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+        padding: 4px 8px;
+        gap: 2px;
+        overflow-x: auto;
+        min-height: auto;
+    }
+    .menu-item { padding: 4px 10px; font-size: 9px; white-space: nowrap; }
+    .content { margin-left: 0; padding: 10px 12px; }
+    .section { padding: 4px 0; }
     .chat-modal { bottom: 0; right: 0; width: 100%; max-width: 100%; max-height: 100vh; border-radius: 0; }
-    .stepa-gif { width: 56px; height: 56px; }
-    .footer { font-size: 8px; padding: 6px 14px; }
+    .stepa-gif { width: 64px; height: 64px; }
+    .footer { font-size: 8px; padding: 6px 14px; flex-direction: column; align-items: center; gap: 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

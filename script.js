@@ -1472,7 +1472,6 @@ const stepaReset = document.getElementById('stepaReset');
 let stepaGame = 'rps';
 let stepaBoard = ['','','','','','','','',''];
 let stepaActive = true;
-let stepaMistakeChance = 0.15;
 let stepaPos = null;
 let stepaSelected = null;
 let stepaTurn = 'white';
@@ -1485,6 +1484,7 @@ let stepaDifficulty = 'medium';
 
 const STEPA_WHITE_PIECE = 'https://avatanplus.com/files/resources/original/5f394193cd6b2173f7a82981.png';
 
+// ---- ОТКРЫТИЕ/ЗАКРЫТИЕ МОДАЛКИ ----
 stepaWrapper.addEventListener('click', function(e) {
     e.stopPropagation();
     stepaModal.classList.toggle('open');
@@ -1497,6 +1497,7 @@ stepaModalClose.addEventListener('click', function() {
     stepaModal.classList.remove('open');
 });
 
+// ----- хули ты тут потерял долбаеб -----
 document.addEventListener('click', function(e) {
     if (stepaModal.contains(e.target) || stepaWrapper.contains(e.target)) {
         return;
@@ -1504,11 +1505,7 @@ document.addEventListener('click', function(e) {
     stepaModal.classList.remove('open');
 });
 
-function stepaUpdateColors() {
-    stepaPlayerColor = document.getElementById('stepaColor').value;
-    stepaBotColor = stepaPlayerColor === 'white' ? 'black' : 'white';
-}
-
+// ---- КАМЕНЬ-НОЖНИЦЫ-БУМАГА ----
 document.querySelectorAll('.stepa-rps-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         const moves = ['камень','ножницы','бумага'];
@@ -1529,6 +1526,7 @@ document.querySelectorAll('.stepa-rps-btn').forEach(function(btn) {
     });
 });
 
+// ---- КРЕСТИКИ-НОЛИКИ ----
 function stepaCheckWin(b) {
     const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     for (const [a,b_,c] of wins) if (b[a] && b[a]===b[b_] && b[a]===b[c]) return b[a];
@@ -1565,10 +1563,6 @@ function stepaFindBestMove() {
             stepaBoard[i] = '';
             if (score > bestScore) { bestScore = score; bestMove = i; }
         }
-    }
-    if (Math.random() < stepaMistakeChance && empty.length > 1) {
-        const bad = empty.filter(i => i !== bestMove);
-        if (bad.length > 0) return bad[Math.floor(Math.random() * bad.length)];
     }
     return bestMove;
 }
@@ -1622,6 +1616,7 @@ function stepaTttMove(i) {
     }, 300);
 }
 
+// ---- ШАШКИ (УМНЫЙ ИИ С MINIMAX) ----
 function stepaCreatePos() {
     const pos = [];
     for (let r=0; r<8; r++) {
@@ -1726,6 +1721,7 @@ function stepaEval(pos) {
     return score;
 }
 
+// ----- ОСНОВНОЙ АЛГОРИТМ -----
 function stepaMinimaxCheckers(pos, depth, isMax, alpha, beta) {
     if (depth===0) return stepaEval(pos);
     const moves = stepaAllMoves(pos, isMax);
@@ -1741,21 +1737,27 @@ function stepaMinimaxCheckers(pos, depth, isMax, alpha, beta) {
     }
 }
 
+// ----- ВЫБОР ЛУЧШЕГО ХОДА ДЛЯ СТЕПАШИ -----
 function stepaFindBestCheckers(pos) {
     const botIsWhite = stepaBotColor === 'white';
     const moves = stepaAllMoves(pos, botIsWhite);
     if (moves.length===0) return null;
-    const depth = stepaDifficulty==='easy'?1:stepaDifficulty==='medium'?3:5;
+    
+    // Глубина зависит от сложности
+    let depth = 1;
+    if (stepaDifficulty === 'medium') depth = 3;
+    if (stepaDifficulty === 'hard') depth = 5;
+    
     let best = moves[0], bestScore = botIsWhite ? -99999 : 99999;
     for (const m of moves) {
         const np = stepaMakeMove(pos, m);
         const score = stepaMinimaxCheckers(np, depth-1, !botIsWhite, -99999, 99999);
         if (botIsWhite) { if (score > bestScore) { bestScore = score; best = m; } } else { if (score < bestScore) { bestScore = score; best = m; } }
     }
-    if (stepaDifficulty==='easy' && Math.random()<0.3 && moves.length>1) return moves[Math.floor(Math.random()*moves.length)];
     return best;
 }
 
+// ----- ХОД СТЕПАШИ В ШАШКАХ -----
 function stepaBotCheckers() {
     if (stepaGameOver) return;
     const move = stepaFindBestCheckers(stepaPos);
@@ -1773,6 +1775,7 @@ function stepaBotCheckers() {
     }
 }
 
+// ----- ОТРИСОВКА ДОСКИ ШАШЕК -----
 function stepaRenderCheckers() {
     const board = document.getElementById('stepaCheckersBoard');
     board.innerHTML = '';
@@ -1796,6 +1799,7 @@ function stepaRenderCheckers() {
     }
 }
 
+// ----- КЛИК ПО ДОСКЕ ШАШЕК (ХОД ИГРОКА) -----
 function stepaCheckersClick(row, col) {
     if (stepaGameOver || stepaTurn !== stepaPlayerColor) return;
     const isPlayerWhite = stepaPlayerColor === 'white';
@@ -1838,6 +1842,7 @@ function stepaCheckersClick(row, col) {
     stepaRenderCheckers();
 }
 
+// ----- ВЫБОР ИГРЫ -----
 document.querySelectorAll('.stepa-game-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         document.querySelectorAll('.stepa-game-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -1850,9 +1855,15 @@ document.querySelectorAll('.stepa-game-btn').forEach(function(btn) {
     });
 });
 
+// ----- СБРОС ИГРЫ (RESET) -----
 stepaReset.addEventListener('click', stepaResetAll);
 document.getElementById('stepaColor').addEventListener('change', stepaResetAll);
 document.getElementById('stepaDifficulty').addEventListener('change', function() { stepaDifficulty = this.value; stepaResetAll(); });
+
+function stepaUpdateColors() {
+    stepaPlayerColor = document.getElementById('stepaColor').value;
+    stepaBotColor = stepaPlayerColor === 'white' ? 'black' : 'white';
+}
 
 function stepaResetAll() {
     clearTimeout(stepaChainTimer);

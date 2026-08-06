@@ -3,55 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=0.8">
-    <meta name="theme-color" content="#0a0a0f">
+    <meta name="theme-color" content="#0a0a1a">
     <title>DARK FORT</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<!-- ЗАГРУЗОЧНЫЙ ЭКРАН -->
-<div id="loadingScreen">
-    <img src="https://c.tenor.com/7UsAMDDNSTQAAAAC/tenor.gif" alt="Загрузка">
-</div>
+    <!-- ЗАГРУЗОЧНЫЙ ЭКРАН -->
+    <div id="loadingScreen">
+        <img src="https://c.tenor.com/7UsAMDDNSTQAAAAC/tenor.gif" alt="Загрузка">
+    </div>
 
     <div class="box">
+        <div class="title-bar">
+            <span class="title-text">✦ DARK FORTPORT ✦</span>
+            <div class="title-controls">
+                <span class="win-btn">─</span>
+                <span class="win-btn">☐</span>
+                <span class="win-btn close">✕</span>
+            </div>
+        </div>
+
         <div class="profile-row">
-            <img class="avatar" id="profileAvatar" src="https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png" alt="Аватар">
+            <div class="avatar-wrap">
+                <img class="avatar" id="profileAvatar" src="https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png" alt="Аватар">
+                <div class="avatar-glow"></div>
+            </div>
             <input type="file" id="avatarUpload" class="avatar-input" accept="image/*">
             <div class="nick-wrap">
-                <input type="text" class="nick-input" id="nicknameInput" placeholder="Введите ник" maxlength="20">
+                <input type="text" class="nick-input" id="nicknameInput" placeholder="ВВЕДИТЕ НИК" maxlength="20">
                 <div class="nick-error-msg" id="nickErrorMsg">НИК ЗАНЯТ</div>
             </div>
             <button class="bell" id="bellBtn" type="button">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 <span class="bell-count" id="notifCount">0</span>
+                <div class="bell-glow"></div>
             </button>
         </div>
 
         <div class="tabs" role="tablist">
-            <button id="tabFeed" class="active" type="button">ПОСТЫ</button>
-            <button id="tabSearch" type="button">ПОИСК</button>
-            <button id="tabFriends" type="button">ДРУЗЬЯ</button>
-            <button id="tabCreate" type="button">СДЕЛАТЬ ПОСТ</button>
-            <button id="tabProfile" type="button">ТВОЙ ПРОФИЛЬ</button>
+            <button id="tabFeed" class="active" type="button">📝 ПОСТЫ</button>
+            <button id="tabSearch" type="button">🔍 ПОИСК</button>
+            <button id="tabFriends" type="button">👥 ДРУЗЬЯ</button>
+            <button id="tabCreate" type="button">✏️ СОЗДАТЬ</button>
+            <button id="tabProfile" type="button">👤 ПРОФИЛЬ</button>
         </div>
 
         <div class="notif-panel" id="notificationPanel"></div>
 
         <div id="feedSection" class="section active">
             <div class="posts-list" id="postsListFeed">
-                <div class="empty-posts">ЗАГРУЗКА...</div>
+                <div class="empty-posts">🌀 ЗАГРУЗКА...</div>
             </div>
         </div>
 
         <div id="searchSection" class="section">
             <div class="search-container">
                 <div class="search-tabs">
-                    <button id="searchUsersTab" class="search-tab active" type="button">НАЙТИ ПОЛЬЗОВАТЕЛЯ</button>
-                    <button id="searchPostsTab" class="search-tab" type="button">НАЙТИ ПОСТ</button>
+                    <button id="searchUsersTab" class="search-tab active" type="button">👤 ПОЛЬЗОВАТЕЛИ</button>
+                    <button id="searchPostsTab" class="search-tab" type="button">📄 ПОСТЫ</button>
                 </div>
-                <input type="text" id="searchInput" class="search-input" placeholder="ВВЕДИТЕ ЗАПРОС..." maxlength="50">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 ВВЕДИТЕ ЗАПРОС..." maxlength="50">
                 <div class="search-results" id="searchResults">
-                    <div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>
+                    <div class="empty-posts">🌀 ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>
                 </div>
             </div>
         </div>
@@ -59,36 +72,41 @@
         <div id="friendsSection" class="section">
             <div class="friends-container">
                 <div class="friends-header">
-                    <h3>ДРУЗЬЯ</h3>
-                    <button class="btn add-friend-btn" id="addFriendBtn">ДОБАВИТЬ</button>
+                    <h3>👥 ДРУЗЬЯ</h3>
+                    <button class="btn add-friend-btn" id="addFriendBtn">➕ ДОБАВИТЬ</button>
                 </div>
                 <div class="friends-list" id="friendsList">
-                    <div class="empty-posts">У ВАС НЕТ ДРУЗЕЙ</div>
+                    <div class="empty-posts">🌀 У ВАС НЕТ ДРУЗЕЙ</div>
                 </div>
             </div>
         </div>
 
         <div id="createSection" class="section">
             <div class="create-post">
-                <textarea class="post-input" id="postText" maxlength="5000" placeholder="ЧТО НОВОГО?"></textarea>
+                <textarea class="post-input" id="postText" maxlength="5000" placeholder="✏️ ЧТО НОВОГО?"></textarea>
                 <div class="media-preview" id="mediaPreview"></div>
-                <button class="attach-btn" id="attachBtn" type="button">
-                    <img src="https://media.tenor.com/jtS4RMiJDXUAAAAj/clippy-windows-xp.gif" alt="прикрепить">
-                </button>
-                <input type="file" id="mediaUpload" accept="image/*,video/*" multiple hidden>
-                <div id="uploadStatus" class="upload-status"></div>
-                <button class="btn" id="publishBtn" type="button">ОПУБЛИКОВАТЬ</button>
+                <div class="create-actions">
+                    <button class="attach-btn" id="attachBtn" type="button">
+                        <img src="https://media.tenor.com/jtS4RMiJDXUAAAAj/clippy-windows-xp.gif" alt="прикрепить">
+                    </button>
+                    <input type="file" id="mediaUpload" accept="image/*,video/*" multiple hidden>
+                    <div id="uploadStatus" class="upload-status"></div>
+                    <button class="btn" id="publishBtn" type="button">🚀 ОПУБЛИКОВАТЬ</button>
+                </div>
             </div>
         </div>
 
         <div id="profileSection" class="section">
             <div class="profile-info">
-                <img id="profileBigAvatar" src="https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png" alt="аватар">
+                <div class="profile-avatar-wrap">
+                    <img id="profileBigAvatar" src="https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png" alt="аватар">
+                    <div class="profile-avatar-glow"></div>
+                </div>
                 <h3 id="profileNickname">ТВОЙ НИК</h3>
-                <p>МОИ ПОСТЫ</p>
+                <p>📌 МОИ ПОСТЫ</p>
             </div>
             <div class="posts-list" id="postsListProfile">
-                <div class="empty-posts">НЕТ ПОСТОВ</div>
+                <div class="empty-posts">🌀 НЕТ ПОСТОВ</div>
             </div>
         </div>
     </div>
@@ -96,36 +114,37 @@
     <!-- ЧАТ -->
     <div class="chat-modal" id="chatModal">
         <div class="chat-header">
-            <span id="chatFriendName">ДРУГ</span>
+            <span id="chatFriendName">💬 ДРУГ</span>
             <button class="close-chat" id="closeChatBtn">✕</button>
         </div>
         <div class="chat-messages" id="chatMessages">
-            <div class="empty-posts">НАЧНИТЕ ОБЩЕНИЕ</div>
+            <div class="empty-posts">🌀 НАЧНИТЕ ОБЩЕНИЕ</div>
         </div>
         <div class="chat-input-row">
-            <input type="text" id="chatInput" placeholder="ВВЕДИТЕ СООБЩЕНИЕ..." maxlength="1000">
-            <button class="btn" id="sendChatBtn">ОТПРАВИТЬ</button>
+            <input type="text" id="chatInput" placeholder="💬 ВВЕДИТЕ СООБЩЕНИЕ..." maxlength="1000">
+            <button class="btn" id="sendChatBtn">➤</button>
         </div>
     </div>
 
     <!-- СТЕПАША -->
     <div id="stepaWrapper">
         <img class="stepa-gif" id="stepaGif" src="https://theblueprint.ru/upload/10286m/vms/eab27402cc3bb03d766824c3b6cdbd90.gif" alt="Степаша">
+        <div class="stepa-glow"></div>
     </div>
 
     <!-- МОДАЛКА С ИГРАМИ ОТ СТЕПАШИ -->
     <div class="stepa-modal" id="stepaModal">
         <div class="stepa-modal-header">
-            <span>СТЕПАША</span>
+            <span>🌀 СТЕПАША</span>
             <button class="stepa-modal-close" id="stepaModalClose">✕</button>
         </div>
         <div class="stepa-modal-body">
-            <div class="stepa-phrase" id="stepaPhrase">бурмалда</div>
+            <div class="stepa-phrase" id="stepaPhrase">🌀 бурмалда</div>
             
             <div class="stepa-game-select">
-                <button class="stepa-game-btn active" data-stepa-game="rps">КАМЕНЬ НОЖНИЦЫ</button>
-                <button class="stepa-game-btn" data-stepa-game="ttt">КРЕСТИКИ НОЛИКИ</button>
-                <button class="stepa-game-btn" data-stepa-game="checkers">ШАШКИ</button>
+                <button class="stepa-game-btn active" data-stepa-game="rps">🪨 КАМЕНЬ</button>
+                <button class="stepa-game-btn" data-stepa-game="ttt">❌ КРЕСТИКИ</button>
+                <button class="stepa-game-btn" data-stepa-game="checkers">⬛ ШАШКИ</button>
             </div>
 
             <div id="stepaRps" class="stepa-game-area">
@@ -142,26 +161,26 @@
 
             <div id="stepaCheckers" class="stepa-game-area" style="display:none;">
                 <div class="stepa-checkers-settings">
-                    <label>сложность:</label>
+                    <label>🧠 сложность:</label>
                     <select id="stepaDifficulty">
                         <option value="easy">легко</option>
                         <option value="medium" selected>средне</option>
                         <option value="hard">сложно</option>
                     </select>
-                    <label>цвет:</label>
+                    <label>🎨 цвет:</label>
                     <select id="stepaColor">
-                        <option value="white">белые</option>
-                        <option value="black">чёрные</option>
+                        <option value="white">⚪ белые</option>
+                        <option value="black">⚫ чёрные</option>
                     </select>
                 </div>
                 <div class="stepa-checkers-board" id="stepaCheckersBoard"></div>
             </div>
 
             <div class="stepa-status">
-                <div class="stepa-bot-say" id="stepaBotSay">Степаша: жду</div>
-                <div class="stepa-result" id="stepaResult">сделай выбор</div>
+                <div class="stepa-bot-say" id="stepaBotSay">🌀 Степаша: жду</div>
+                <div class="stepa-result" id="stepaResult">🌀 сделай выбор</div>
             </div>
-            <button class="stepa-reset" id="stepaReset">ЗАНОВО</button>
+            <button class="stepa-reset" id="stepaReset">🔄 ЗАНОВО</button>
         </div>
     </div>
 

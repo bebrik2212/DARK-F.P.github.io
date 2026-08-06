@@ -1484,7 +1484,7 @@ let stepaDifficulty = 'medium';
 const STEPA_WHITE_PIECE = 'https://avatanplus.com/files/resources/original/5f394193cd6b2173f7a82981.png';
 
 stepaGif.style.cssText = `
-    width: 500px !important;
+    width: 120px !important;
     height: 120px !important;
     object-fit: contain !important;
     image-rendering: pixelated !important;

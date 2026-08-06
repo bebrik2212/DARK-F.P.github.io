@@ -394,6 +394,7 @@ function renderPostCard(post) {
     const isAdmin = ADMIN_NICKNAMES.includes(currentProfile?.nickname);
     const canDelete = isMine || isAdmin;
     const deleteBtn = canDelete ? `<button class="delete-post-btn" data-delete="${post.id}" type="button">X</button>` : '';
+    
     let mediaHTML = '';
     if (post.media && post.media.length) {
         mediaHTML = `<div class="post-media">${post.media.map(m => {
@@ -404,6 +405,7 @@ function renderPostCard(post) {
             }
         }).join('')}</div>`;
     }
+    
     const comments = post.comments || [];
     const commentsHTML = comments.map(c => {
         return `
@@ -416,9 +418,11 @@ function renderPostCard(post) {
             </div>
         `;
     }).join('');
+    
     const isOpen = openComments.has(post.id);
     const myVote = post.votes?.[profileId] || 0;
     const postTime = post.createdAt?.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
+    
     return `
         <div class="post-card" data-id="${post.id}">
             <div class="post-header">
@@ -430,9 +434,15 @@ function renderPostCard(post) {
             ${post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : ''}
             ${mediaHTML}
             <div class="post-footer">
-                <button class="vote-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">+ ${post.likes || 0}</button>
-                <button class="vote-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">- ${post.dislikes || 0}</button>
-                <button class="comment-btn" data-toggle="${post.id}" type="button">C ${comments.length}</button>
+                <button class="vote-btn ${myVote === 1 ? 'liked' : ''}" data-vote="1" data-id="${post.id}">
+                    <img src="https://fortport.ru/photo/25465" alt="лайк"> ${post.likes || 0}
+                </button>
+                <button class="vote-btn ${myVote === -1 ? 'disliked' : ''}" data-vote="-1" data-id="${post.id}">
+                    <img src="https://fortport.ru/photo/25463" alt="дизлайк"> ${post.dislikes || 0}
+                </button>
+                <button class="comment-btn" data-toggle="${post.id}" type="button">
+                    <img src="https://fortport.ru/photo/25466" alt="комментарии"> ${comments.length}
+                </button>
             </div>
             <div class="comments-section" id="comments-${post.id}" style="display:${isOpen ? 'block' : 'none'}">
                 ${commentsHTML}
@@ -1236,7 +1246,6 @@ stepaModalClose.addEventListener('click', function() {
     stepaModal.classList.remove('open');
 });
 
-// НЕ ЗАКРЫВАТЬ МОДАЛКУ ПРИ КЛИКЕ ВНУТРИ НЕЁ
 document.addEventListener('click', function(e) {
     if (stepaModal.contains(e.target) || stepaWrapper.contains(e.target)) {
         return;

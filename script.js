@@ -41,6 +41,10 @@ let chatWith = null;
 let unsubscribeChat = null;
 let searchMode = 'users';
 let searchQuery = '';
+let allGames = [];
+let unsubscribeGames = null;
+let selectedGameFile = null;
+let selectedGameAvatar = null;
 
 const nicknameInput = document.getElementById('nicknameInput');
 const profileAvatarEl = document.getElementById('profileAvatar');
@@ -70,7 +74,23 @@ const chatInput = document.getElementById('chatInput');
 const sendChatBtn = document.getElementById('sendChatBtn');
 const closeChatBtn = document.getElementById('closeChatBtn');
 const feedCount = document.getElementById('feedCount');
-
+const gamesList = document.getElementById('gamesList');
+const showUploadGameBtn = document.getElementById('showUploadGameBtn');
+const gameUploadModal = document.getElementById('gameUploadModal');
+const gameUploadClose = document.getElementById('gameUploadClose');
+const gameNameInput = document.getElementById('gameNameInput');
+const gameAvatarInput = document.getElementById('gameAvatarInput');
+const gameAvatarBtn = document.getElementById('gameAvatarBtn');
+const gameAvatarPreview = document.getElementById('gameAvatarPreview');
+const gameFileInput = document.getElementById('gameFileInput');
+const gameFileBtn = document.getElementById('gameFileBtn');
+const gameFileName = document.getElementById('gameFileName');
+const gameUploadBtn = document.getElementById('gameUploadBtn');
+const gameUploadStatus = document.getElementById('gameUploadStatus');
+const gamePlayModal = document.getElementById('gamePlayModal');
+const gamePlayClose = document.getElementById('gamePlayClose');
+const gamePlayTitle = document.getElementById('gamePlayTitle');
+const gameIframe = document.getElementById('gameIframe');
 
 function getCachedData() {
     try {
@@ -85,7 +105,6 @@ function setCachedData(data) {
         localStorage.setItem('df_cache', JSON.stringify(data));
     } catch (e) {}
 }
-
 
 async function getOrCreateProfile() {
     try {
@@ -176,7 +195,6 @@ async function updateOnlineStatus(online) {
     }
 }
 
-
 async function sendFriendRequest(userId) {
     if (!currentProfile) return false;
     if (userId === profileId) {
@@ -229,7 +247,6 @@ async function sendFriendRequest(userId) {
         return false;
     }
 }
-
 
 async function addNotification(userId, type, data) {
     try {
@@ -340,12 +357,10 @@ async function loadNotifications() {
             const notifications = data.notifications || [];
             const pendingRequests = (data.friendRequests || []).filter(req => req.status === 'pending');
             
-            // Обновляем счётчик
             const unreadCount = notifications.filter(n => !n.read).length + pendingRequests.length;
             notifCountEl.textContent = unreadCount;
             notifCountEl.classList.toggle('visible', unreadCount > 0);
             
-            // Сохраняем для отображения
             currentProfile.notifications = notifications;
             currentProfile.friendRequests = data.friendRequests || [];
         }
@@ -361,7 +376,6 @@ function renderNotifications() {
     
     let html = '';
     
-    // Заявки в друзья
     pendingRequests.forEach(req => {
         html += `
             <div class="notif-item">
@@ -377,7 +391,6 @@ function renderNotifications() {
         `;
     });
     
-    // Остальные уведомления
     notifications.forEach(n => {
         let message = '';
         switch(n.type) {
@@ -401,10 +414,6 @@ function renderNotifications() {
     
     notificationPanelEl.innerHTML = html;
 }
-
-// ============================================================
-// ПОСТЫ
-// ============================================================
 
 function subscribeToPosts() {
     if (unsubscribePosts) {
@@ -563,10 +572,6 @@ async function addComment(postId, text) {
     }
 }
 
-// ============================================================
-// UI
-// ============================================================
-
 function updateProfileUI() {
     if (!currentProfile) return;
     const nick = document.activeElement === nicknameInput ? nicknameInput.value.trim() : (currentProfile.nickname || '');
@@ -670,10 +675,6 @@ function renderPostCard(post) {
     `;
 }
 
-// ============================================================
-// ВСПОМОГАТЕЛЬНЫЕ
-// ============================================================
-
 function escapeHtml(v) {
     const d = document.createElement('div');
     d.textContent = v == null ? '' : String(v);
@@ -699,7 +700,6 @@ function showToast(msg, err = false) {
     document.body.append(t);
     setTimeout(() => t.remove(), 3000);
 }
-
 
 async function searchUsers(query) {
     if (!query.trim()) {
@@ -813,7 +813,6 @@ function performSearch(query) {
     }
 }
 
-
 async function loadFriends() {
     if (!currentProfile) return;
     const friendIds = currentProfile.friends || [];
@@ -896,7 +895,6 @@ async function removeFriend(userId) {
         return false;
     }
 }
-
 
 function openChat(userId, userNickname) {
     chatWith = userId;
@@ -981,7 +979,6 @@ async function sendMessage(text) {
         showToast('ОШИБКА ОТПРАВКИ', true);
     }
 }
-
 
 nicknameInput.addEventListener('input', function() {
     const nick = this.value.trim();
@@ -1126,13 +1123,12 @@ publishBtnEl.addEventListener('click', async function() {
     }
 });
 
-
 const sectionMap = {
     feed: 'feedSection',
-    search: 'searchSection',
     friends: 'friendsSection',
     create: 'createSection',
-    profile: 'profileSection'
+    profile: 'profileSection',
+    games: 'gamesSection'
 };
 
 function switchTab(tab) {
@@ -1146,7 +1142,7 @@ function switchTab(tab) {
     if (section) section.classList.add('active');
     
     if (tab === 'friends') loadFriends();
-    if (tab === 'search') performSearch(searchInput.value);
+    if (tab === 'games') loadGames();
     if (tab === 'feed') {
         postsListFeedEl.scrollTop = 0;
         renderAllPosts();
@@ -1159,7 +1155,6 @@ document.querySelectorAll('.menu-item').forEach(item => {
         switchTab(this.dataset.tab);
     });
 });
-
 
 document.addEventListener('click', function(e) {
     const voteBtn = e.target.closest('[data-vote]');
@@ -1202,8 +1197,6 @@ document.addEventListener('click', function(e) {
         deletePost(delBtn.dataset.delete);
         return;
     }
-    
-    // Отправка заявки в друзья
     const sendRequestBtn = e.target.closest('[data-send-request]');
     if (sendRequestBtn) {
         const userId = sendRequestBtn.dataset.sendRequest;
@@ -1211,7 +1204,6 @@ document.addEventListener('click', function(e) {
         performSearch(searchInput.value);
         return;
     }
-    
     const removeFriendBtn = e.target.closest('[data-remove-friend]');
     if (removeFriendBtn) {
         if (!confirm('УДАЛИТЬ ИЗ ДРУЗЕЙ?')) return;
@@ -1245,7 +1237,6 @@ document.addEventListener('click', function(e) {
     }
 });
 
-
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && e.target === chatInput) {
         e.preventDefault();
@@ -1257,14 +1248,12 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-
 searchInput.addEventListener('input', function() {
     clearTimeout(this._searchTimer);
     this._searchTimer = setTimeout(() => {
         performSearch(this.value);
     }, 300);
 });
-
 
 document.querySelectorAll('.search-tab').forEach(tab => {
     tab.addEventListener('click', function() {
@@ -1275,20 +1264,17 @@ document.querySelectorAll('.search-tab').forEach(tab => {
     });
 });
 
-
 if (searchBtn) {
     searchBtn.addEventListener('click', function() {
         performSearch(searchInput.value);
     });
 }
 
-
 bellBtnEl.addEventListener('click', function() {
     notifOpen = !notifOpen;
     notificationPanelEl.style.display = notifOpen ? 'block' : 'none';
     if (notifOpen) {
         renderNotifications();
-        // Помечаем уведомления как прочитанные
         if (currentProfile?.notifications) {
             currentProfile.notifications.forEach(n => n.read = true);
             db.collection('profiles').doc(profileId).update({
@@ -1315,7 +1301,6 @@ document.addEventListener('click', function(e) {
     notificationPanelEl.style.display = 'none';
 });
 
-
 if (addFriendBtn) {
     addFriendBtn.addEventListener('click', function() {
         switchTab('search');
@@ -1326,7 +1311,6 @@ if (addFriendBtn) {
         searchInput.focus();
     });
 }
-
 
 sendChatBtn.addEventListener('click', () => {
     sendMessage(chatInput.value);
@@ -1340,55 +1324,238 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+function loadGames() {
+    if (unsubscribeGames) {
+        unsubscribeGames();
+        unsubscribeGames = null;
+    }
 
-async function init() {
-    try {
-        console.log('DARK FORT INIT');
-        console.log('PROJECT:', firebaseConfig.projectId);
-        await db.collection('_test').doc('test').set({ test: true });
-        console.log('Firebase подключен');
-        await getOrCreateProfile();
-        subscribeToPosts();
-        await updateOnlineStatus(true);
-        if (!currentProfile?.nickname) {
-            nicknameInput.focus();
-        }
-        window.addEventListener('beforeunload', () => {
-            updateOnlineStatus(false);
-        });
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                updateOnlineStatus(false);
-            } else {
-                updateOnlineStatus(true);
+    if (gamesList) {
+        gamesList.innerHTML = '<div class="empty-posts">ЗАГРУЗКА ИГР...</div>';
+    }
+
+    unsubscribeGames = db.collection('games')
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .onSnapshot(async (snapshot) => {
+            const games = [];
+            for (const doc of snapshot.docs) {
+                const data = doc.data();
+                let authorName = 'АНОНИМ';
+                if (data.authorId) {
+                    try {
+                        const authorDoc = await db.collection('profiles').doc(data.authorId).get();
+                        if (authorDoc.exists) {
+                            authorName = authorDoc.data().nickname || 'АНОНИМ';
+                        }
+                    } catch (e) {}
+                }
+                games.push({
+                    id: doc.id,
+                    ...data,
+                    authorName: authorName
+                });
+            }
+            allGames = games;
+            renderGames();
+        }, (error) => {
+            console.error('Ошибка загрузки игр:', error);
+            if (gamesList) {
+                gamesList.innerHTML = '<div class="empty-posts">ОШИБКА ЗАГРУЗКИ ИГР</div>';
             }
         });
-        console.log('DARK FORT ONLINE');
-    } catch (error) {
-        console.error('Ошибка:', error);
-        showToast('ОШИБКА ПОДКЛЮЧЕНИЯ К FIREBASE', true);
-        const cached = getCachedData();
-        if (cached?.profile) {
-            currentProfile = cached.profile;
-            updateProfileUI();
-        }
-        postsListFeedEl.innerHTML = `
-            <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
-                <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
-                <div>ОФФЛАЙН РЕЖИМ</div>
-                <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
-                <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.1);border-radius:6px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+}
+
+function renderGames() {
+    if (!gamesList) return;
+
+    if (allGames.length === 0) {
+        gamesList.innerHTML = '<div class="empty-posts">ИГР НЕТ</div>';
+        return;
+    }
+
+    let html = '';
+    allGames.forEach(game => {
+        html += `
+            <div class="game-card" data-id="${game.id}">
+                <img src="${game.avatarData || DEFAULT_AVATAR}" alt="${escapeHtml(game.name)}">
+                <div class="game-name">${escapeHtml(game.name)}</div>
+                <div class="game-author">${escapeHtml(game.authorName)}</div>
             </div>
         `;
-    }
-    const loadingScreen = document.getElementById('loadingScreen');
-    if (loadingScreen) {
-        loadingScreen.classList.add('hidden');
+    });
+    gamesList.innerHTML = html;
+
+    document.querySelectorAll('.game-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const gameId = this.dataset.id;
+            const game = allGames.find(g => g.id === gameId);
+            if (game) openGame(game);
+        });
+    });
+}
+
+function openGame(game) {
+    if (!gamePlayTitle || !gameIframe || !gamePlayModal) return;
+    gamePlayTitle.textContent = game.name || 'ИГРА';
+    if (game.htmlData) {
+        const blob = new Blob([game.htmlData], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        gameIframe.src = url;
+        gamePlayModal.classList.add('open');
+    } else if (game.htmlUrl) {
+        gameIframe.src = game.htmlUrl;
+        gamePlayModal.classList.add('open');
+    } else {
+        showToast('ОШИБКА: HTML-ФАЙЛ НЕ НАЙДЕН', true);
     }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+if (gamePlayModal) {
+    gamePlayModal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.classList.remove('open');
+            if (gameIframe) gameIframe.src = '';
+        }
+    });
+}
 
+if (gamePlayClose) {
+    gamePlayClose.addEventListener('click', function() {
+        if (gamePlayModal) gamePlayModal.classList.remove('open');
+        if (gameIframe) gameIframe.src = '';
+    });
+}
+
+if (showUploadGameBtn) {
+    showUploadGameBtn.addEventListener('click', function() {
+        if (gameUploadModal) {
+            gameUploadModal.classList.add('open');
+            if (gameNameInput) gameNameInput.value = '';
+            selectedGameFile = null;
+            selectedGameAvatar = null;
+            if (gameFileName) gameFileName.textContent = 'ФАЙЛ НЕ ВЫБРАН';
+            if (gameAvatarPreview) {
+                gameAvatarPreview.src = 'https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png';
+            }
+            if (gameUploadStatus) gameUploadStatus.textContent = '';
+        }
+    });
+}
+
+if (gameUploadClose) {
+    gameUploadClose.addEventListener('click', function() {
+        if (gameUploadModal) gameUploadModal.classList.remove('open');
+    });
+}
+
+if (gameUploadModal) {
+    gameUploadModal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.classList.remove('open');
+        }
+    });
+}
+
+if (gameAvatarBtn && gameAvatarInput) {
+    gameAvatarBtn.addEventListener('click', () => gameAvatarInput.click());
+    gameAvatarInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (gameAvatarPreview) {
+                gameAvatarPreview.src = e.target.result;
+            }
+            selectedGameAvatar = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+if (gameFileBtn && gameFileInput) {
+    gameFileBtn.addEventListener('click', () => gameFileInput.click());
+    gameFileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (!file) return;
+        if (!file.name.endsWith('.html')) {
+            showToast('ТОЛЬКО .HTML ФАЙЛЫ', true);
+            return;
+        }
+        selectedGameFile = file;
+        if (gameFileName) {
+            gameFileName.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+        }
+    });
+}
+
+if (gameUploadBtn) {
+    gameUploadBtn.addEventListener('click', async function() {
+        if (!currentProfile?.nickname) {
+            showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
+            return;
+        }
+
+        const name = gameNameInput ? gameNameInput.value.trim() : '';
+        if (!name) {
+            showToast('ВВЕДИТЕ НАЗВАНИЕ ИГРЫ', true);
+            return;
+        }
+
+        if (!selectedGameFile) {
+            showToast('ВЫБЕРИТЕ HTML-ФАЙЛ', true);
+            return;
+        }
+
+        this.disabled = true;
+        this.textContent = 'ЗАГРУЗКА...';
+        if (gameUploadStatus) {
+            gameUploadStatus.textContent = 'ЧТЕНИЕ ФАЙЛА...';
+        }
+
+        try {
+            const htmlContent = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsText(selectedGameFile);
+            });
+
+            const gameData = {
+                name: name,
+                authorId: profileId,
+                authorName: currentProfile.nickname || 'АНОНИМ',
+                htmlData: htmlContent,
+                avatarData: selectedGameAvatar || DEFAULT_AVATAR,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await db.collection('games').add(gameData);
+
+            showToast('ИГРА ОПУБЛИКОВАНА!');
+            if (gameUploadModal) gameUploadModal.classList.remove('open');
+            if (gameUploadStatus) gameUploadStatus.textContent = 'ГОТОВО!';
+            if (gameNameInput) gameNameInput.value = '';
+            selectedGameFile = null;
+            selectedGameAvatar = null;
+            if (gameFileName) gameFileName.textContent = 'ФАЙЛ НЕ ВЫБРАН';
+            if (gameAvatarPreview) {
+                gameAvatarPreview.src = 'https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png';
+            }
+            loadGames();
+
+        } catch (error) {
+            console.error('Ошибка загрузки игры:', error);
+            showToast('ОШИБКА ЗАГРУЗКИ: ' + error.message, true);
+            if (gameUploadStatus) {
+                gameUploadStatus.textContent = 'ОШИБКА: ' + error.message;
+            }
+        } finally {
+            this.disabled = false;
+            this.textContent = 'ОПУБЛИКОВАТЬ';
+        }
+    });
+}
 
 const stepaGif = document.getElementById('stepaGif');
 const stepaWrapper = document.getElementById('stepaWrapper');
@@ -1411,7 +1578,6 @@ let stepaGameOver = false;
 let stepaChain = [];
 let stepaChainTimer = null;
 let stepaDifficulty = 'medium';
-
 const STEPA_WHITE_PIECE = 'https://avatanplus.com/files/resources/original/5f394193cd6b2173f7a82981.png';
 
 stepaGif.style.cssText = `
@@ -1457,12 +1623,10 @@ document.addEventListener('mousemove', function(e) {
     if (!isDragging) return;
     let x = e.clientX - dragOffsetX;
     let y = e.clientY - dragOffsetY;
-    
     const maxX = window.innerWidth - 140;
     const maxY = window.innerHeight - 140;
     x = Math.max(0, Math.min(x, maxX));
     y = Math.max(0, Math.min(y, maxY));
-    
     stepaWrapper.style.left = x + 'px';
     stepaWrapper.style.top = y + 'px';
 });
@@ -1878,3 +2042,51 @@ function stepaResetAll() {
 }
 
 stepaResetAll();
+
+async function init() {
+    try {
+        console.log('DARK FORT INIT');
+        console.log('PROJECT:', firebaseConfig.projectId);
+        await db.collection('_test').doc('test').set({ test: true });
+        console.log('Firebase подключен');
+        await getOrCreateProfile();
+        subscribeToPosts();
+        await updateOnlineStatus(true);
+        if (!currentProfile?.nickname) {
+            nicknameInput.focus();
+        }
+        window.addEventListener('beforeunload', () => {
+            updateOnlineStatus(false);
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                updateOnlineStatus(false);
+            } else {
+                updateOnlineStatus(true);
+            }
+        });
+        console.log('DARK FORT ONLINE');
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showToast('ОШИБКА ПОДКЛЮЧЕНИЯ К FIREBASE', true);
+        const cached = getCachedData();
+        if (cached?.profile) {
+            currentProfile = cached.profile;
+            updateProfileUI();
+        }
+        postsListFeedEl.innerHTML = `
+            <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
+                <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+                <div>ОФФЛАЙН РЕЖИМ</div>
+                <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
+                <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.1);border-radius:6px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+            </div>
+        `;
+    }
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) {
+        loadingScreen.classList.add('hidden');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', init);

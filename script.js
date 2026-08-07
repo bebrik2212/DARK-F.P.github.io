@@ -1,4 +1,4 @@
-const firebaseConfig = {const firebaseConfig = {
+const firebaseConfig = {
     apiKey: "AIzaSyBa9NWi5FpmAx6ExJh1fJ3b1ipUEEBRxU",
     authDomain: "dark-fortport.firebaseapp.com",
     projectId: "dark-fortport",
@@ -13,17 +13,6 @@ const db = firebase.firestore();
 db.enablePersistence()
     .then(() => console.log('Offline enabled'))
     .catch(() => console.warn('Offline not available'));
-
-// ============================================================
-// СКРЫТИЕ ЗАГРУЗКИ (СРАЗУ, БЕЗ УСЛОВИЙ)
-// ============================================================
-const loadingScreen = document.getElementById('loadingScreen');
-if (loadingScreen) {
-    loadingScreen.classList.add('hidden');
-    console.log('✅ Загрузка скрыта');
-} else {
-    console.warn('⚠️ Загрузочный экран не найден');
-}
 
 const ADMIN_NICKNAMES = ['amamammellstroy67'];
 const DEFAULT_AVATAR = 'https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png';
@@ -56,7 +45,6 @@ let allGames = [];
 let unsubscribeGames = null;
 let selectedGameFile = null;
 let selectedGameAvatar = null;
-let isInitialized = false;
 
 const nicknameInput = document.getElementById('nicknameInput');
 const profileAvatarEl = document.getElementById('profileAvatar');
@@ -989,6 +977,7 @@ async function sendMessage(text) {
     } catch (error) {
         console.error('Ошибка отправки:', error);
         showToast('ОШИБКА ОТПРАВКИ', true);
+        return false;
     }
 }
 
@@ -2055,35 +2044,21 @@ function stepaResetAll() {
 
 stepaResetAll();
 
-// ============================================================
-// ГЛАВНАЯ ФУНКЦИЯ ЗАПУСКА
-// ============================================================
-
 async function init() {
     try {
         console.log('DARK FORT INIT');
         console.log('PROJECT:', firebaseConfig.projectId);
-        
-        // Пытаемся подключиться к Firebase
-        try {
-            await db.collection('_test').doc('test').set({ test: true });
-            console.log('✅ Firebase подключен');
-        } catch (fbError) {
-            console.warn('⚠️ Firebase не отвечает, используем кэш:', fbError);
-        }
-        
+        await db.collection('_test').doc('test').set({ test: true });
+        console.log('Firebase подключен');
         await getOrCreateProfile();
         subscribeToPosts();
         await updateOnlineStatus(true);
-        
         if (!currentProfile?.nickname) {
             nicknameInput.focus();
         }
-        
         window.addEventListener('beforeunload', () => {
             updateOnlineStatus(false);
         });
-        
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 updateOnlineStatus(false);
@@ -2091,10 +2066,10 @@ async function init() {
                 updateOnlineStatus(true);
             }
         });
-        
-        console.log('✅ DARK FORT ONLINE');
+        console.log('DARK FORT ONLINE');
     } catch (error) {
-        console.error('❌ Ошибка инициализации:', error);
+        console.error('Ошибка:', error);
+        showToast('ОШИБКА ПОДКЛЮЧЕНИЯ К FIREBASE', true);
         const cached = getCachedData();
         if (cached?.profile) {
             currentProfile = cached.profile;
@@ -2111,11 +2086,4 @@ async function init() {
     }
 }
 
-// ============================================================
-// ЗАПУСК
-// ============================================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Запускаем инициализацию
-    init();
-});
+document.addEventListener('DOMContentLoaded', init);

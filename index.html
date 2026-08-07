@@ -9,22 +9,17 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <!-- ЗАГРУЗОЧНЫЙ ЭКРАН (БЕЛЫЙ) -->
     <div id="loadingScreen">
         <img src="https://c.tenor.com/7UsAMDDNSTQAAAAC/tenor.gif" alt="Загрузка">
     </div>
-
-    <!-- ЛОГОТИП В УГЛУ (БЕЗ РАМКИ) -->
     <div class="corner-logo">
         <img src="https://fortport.ru/photo/25470" alt="DARK FORTPORT">
     </div>
-
     <div class="container">
-        <!-- ШАПКА С БАННЕРОМ (ЗАМЕНИТЕ ССЫЛКУ, ЕСЛИ НУЖНО) -->
         <header class="header">
             <div class="logo">
-                <img class="logo-banner" src="https://fortport.ru/photo/25952" alt="DARK FORTPORT">
+                <span class="logo-text"></span>
+                <span class="logo-sub"></span>
             </div>
             <div class="header-right">
                 <button class="bell" id="bellBtn" type="button">
@@ -33,7 +28,6 @@
                 </button>
             </div>
         </header>
-
         <div class="profile-row">
             <div class="avatar-wrap">
                 <img class="avatar" id="profileAvatar" src="https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png" alt="Аватар">
@@ -44,18 +38,15 @@
                 <div class="nick-error-msg" id="nickErrorMsg">ТАКОЙ ЧЕЛОВЕК ЕСТЬ</div>
             </div>
         </div>
-
         <nav class="main-menu">
             <a class="menu-item active" data-tab="feed"><span class="menu-label">ПОСТЫ</span></a>
-            <a class="menu-item" data-tab="search"><span class="menu-label">ПОИСК</span></a>
             <a class="menu-item" data-tab="friends"><span class="menu-label">ДРУЗЬЯ</span></a>
             <a class="menu-item" data-tab="create"><span class="menu-label">СОЗДАТЬ</span></a>
             <a class="menu-item" data-tab="profile"><span class="menu-label">ПРОФИЛЬ</span></a>
+            <a class="menu-item" data-tab="games"><span class="menu-label">ИГРЫ</span></a>
         </nav>
-
         <main class="content">
             <div class="notif-panel" id="notificationPanel"></div>
-
             <div id="feedSection" class="section active">
                 <div class="section-header">
                     <h2>ПОСТЫ</h2>
@@ -65,24 +56,6 @@
                     <div class="empty-posts">ЗАГРУЗКА...</div>
                 </div>
             </div>
-
-            <div id="searchSection" class="section">
-                <div class="section-header"><h2>ПОИСК</h2></div>
-                <div class="search-container">
-                    <div class="search-tabs">
-                        <button class="search-tab active" data-search="users">ПОЛЬЗОВАТЕЛИ</button>
-                        <button class="search-tab" data-search="posts">ПОСТЫ</button>
-                    </div>
-                    <div class="search-box">
-                        <input type="text" id="searchInput" class="search-input" placeholder="ВВЕДИТЕ ЗАПРОС..." maxlength="50">
-                        <button class="search-btn" id="searchBtn">🔍</button>
-                    </div>
-                    <div class="search-results" id="searchResults">
-                        <div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>
-                    </div>
-                </div>
-            </div>
-
             <div id="friendsSection" class="section">
                 <div class="section-header">
                     <h2>Друзья</h2>
@@ -92,7 +65,6 @@
                     <div class="empty-posts">У ВАС НЕТ ДРУЗЕЙ</div>
                 </div>
             </div>
-
             <div id="createSection" class="section">
                 <div class="section-header"><h2>Создать пост</h2></div>
                 <div class="create-post">
@@ -108,7 +80,6 @@
                     </div>
                 </div>
             </div>
-
             <div id="profileSection" class="section">
                 <div class="section-header"><h2>ЭТО ТЫ</h2></div>
                 <div class="profile-info">
@@ -122,14 +93,21 @@
                     <div class="empty-posts">НЕТ ПОСТОВ</div>
                 </div>
             </div>
+            <div id="gamesSection" class="section">
+                <div class="section-header">
+                    <h2>ИГРЫ</h2>
+                    <button class="btn" id="showUploadGameBtn">ЗАГРУЗИТЬ</button>
+                </div>
+                <div class="games-grid" id="gamesList">
+                    <div class="empty-posts">ЗАГРУЗКА ИГР...</div>
+                </div>
+            </div>
         </main>
-
         <footer class="footer">
             <span>DARK FORT</span>
             <span>ТЕМНАЯ СТОРОНА ФОРТПОРТ</span>
         </footer>
     </div>
-
     <div class="chat-modal" id="chatModal">
         <div class="chat-header">
             <span id="chatFriendName">ЧАТ С ДРУГОМ</span>
@@ -143,11 +121,52 @@
             <button class="btn" id="sendChatBtn">></button>
         </div>
     </div>
-
+    <div class="game-upload-modal" id="gameUploadModal">
+        <div class="game-upload-modal-content">
+            <div class="stepa-modal-header">
+                <span>ЗАГРУЗИТЬ ИГРУ</span>
+                <button class="stepa-modal-close" id="gameUploadClose">X</button>
+            </div>
+            <div class="stepa-modal-body">
+                <div class="game-upload-form">
+                    <div style="margin-bottom:10px;">
+                        <label>НАЗВАНИЕ ИГРЫ</label>
+                        <input type="text" id="gameNameInput" class="game-input" placeholder="ВВЕДИТЕ НАЗВАНИЕ..." maxlength="50">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label>АВАТАР ИГРЫ</label>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <img id="gameAvatarPreview" src="https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid var(--line);">
+                            <button class="btn" id="gameAvatarBtn">ВЫБРАТЬ</button>
+                            <input type="file" id="gameAvatarInput" accept="image/*" hidden>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label>HTML-ФАЙЛ ИГРЫ</label>
+                        <button class="btn" id="gameFileBtn">ВЫБРАТЬ HTML</button>
+                        <input type="file" id="gameFileInput" accept=".html" hidden>
+                        <div id="gameFileName" style="margin-top:4px;color:var(--muted);font-size:10px;">ФАЙЛ НЕ ВЫБРАН</div>
+                    </div>
+                    <button class="btn publish-btn" id="gameUploadBtn" style="width:100%;">ОПУБЛИКОВАТЬ</button>
+                    <div id="gameUploadStatus" style="margin-top:8px;color:var(--muted);font-size:10px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="game-play-modal" id="gamePlayModal">
+        <div class="game-play-modal-content">
+            <div class="stepa-modal-header">
+                <span id="gamePlayTitle">ИГРА</span>
+                <button class="stepa-modal-close" id="gamePlayClose">X</button>
+            </div>
+            <div class="stepa-modal-body" style="padding:0;">
+                <iframe id="gameIframe" sandbox="allow-scripts allow-same-origin" style="width:100%;height:500px;border:none;background:#fff;"></iframe>
+            </div>
+        </div>
+    </div>
     <div id="stepaWrapper">
         <img class="stepa-gif" id="stepaGif" src="https://theblueprint.ru/upload/10286m/vms/eab27402cc3bb03d766824c3b6cdbd90.gif" alt="Степаша">
     </div>
-
     <div class="stepa-modal" id="stepaModal">
         <div class="stepa-modal-header">
             <span>СТЕПАША</span>
@@ -193,7 +212,6 @@
             <button class="stepa-reset" id="stepaReset">ЗАНОВО</button>
         </div>
     </div>
-
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="script.js"></script>

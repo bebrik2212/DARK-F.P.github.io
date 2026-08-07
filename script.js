@@ -99,6 +99,22 @@ const gamePlayModal = document.getElementById('gamePlayModal');
 const gamePlayClose = document.getElementById('gamePlayClose');
 const gamePlayTitle = document.getElementById('gamePlayTitle');
 const gameIframe = document.getElementById('gameIframe');
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+const searchBtn = document.getElementById('searchBtn');
+
+// ============================================================
+// ПРИНУДИТЕЛЬНОЕ СКРЫТИЕ ЗАГРУЗКИ (ДАЖЕ ЕСЛИ ОШИБКА)
+// ============================================================
+function hideLoading() {
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) {
+        loadingScreen.classList.add('hidden');
+    }
+}
+
+// Скрываем через 1 секунду в любом случае
+setTimeout(hideLoading, 1000);
 
 // ============================================================
 // КЭШ
@@ -516,7 +532,7 @@ function showToast(msg, err = false) {
 // ============================================================
 async function searchUsers(query) {
     if (!query.trim()) {
-        searchResults.innerHTML = '<div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>';
+        if (searchResults) searchResults.innerHTML = '<div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>';
         return;
     }
     try {
@@ -526,7 +542,7 @@ async function searchUsers(query) {
             .limit(20)
             .get();
         if (snapshot.empty) {
-            searchResults.innerHTML = '<div class="empty-posts">ПОЛЬЗОВАТЕЛИ НЕ НАЙДЕНЫ</div>';
+            if (searchResults) searchResults.innerHTML = '<div class="empty-posts">ПОЛЬЗОВАТЕЛИ НЕ НАЙДЕНЫ</div>';
             return;
         }
         let html = '';
@@ -556,16 +572,16 @@ async function searchUsers(query) {
                 </div>
             `;
         });
-        searchResults.innerHTML = html;
+        if (searchResults) searchResults.innerHTML = html;
     } catch (error) {
         console.error('Ошибка поиска:', error);
-        searchResults.innerHTML = '<div class="empty-posts">ОШИБКА ПОИСКА</div>';
+        if (searchResults) searchResults.innerHTML = '<div class="empty-posts">ОШИБКА ПОИСКА</div>';
     }
 }
 
 async function searchPosts(query) {
     if (!query.trim()) {
-        searchResults.innerHTML = '<div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>';
+        if (searchResults) searchResults.innerHTML = '<div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>';
         return;
     }
     try {
@@ -596,7 +612,7 @@ async function searchPosts(query) {
             }
         }
         if (!results.length) {
-            searchResults.innerHTML = '<div class="empty-posts">ПОСТЫ НЕ НАЙДЕНЫ</div>';
+            if (searchResults) searchResults.innerHTML = '<div class="empty-posts">ПОСТЫ НЕ НАЙДЕНЫ</div>';
             return;
         }
         let html = '';
@@ -610,10 +626,10 @@ async function searchPosts(query) {
                 </div>
             `;
         });
-        searchResults.innerHTML = html;
+        if (searchResults) searchResults.innerHTML = html;
     } catch (error) {
         console.error('Ошибка поиска постов:', error);
-        searchResults.innerHTML = '<div class="empty-posts">ОШИБКА ПОИСКА</div>';
+        if (searchResults) searchResults.innerHTML = '<div class="empty-posts">ОШИБКА ПОИСКА</div>';
     }
 }
 
@@ -1116,7 +1132,7 @@ document.addEventListener('click', function(e) {
     if (sendRequestBtn) {
         const userId = sendRequestBtn.dataset.sendRequest;
         addFriend(userId);
-        performSearch(searchInput.value);
+        if (searchInput) performSearch(searchInput.value);
         return;
     }
     const removeFriendBtn = e.target.closest('[data-remove-friend]');
@@ -1159,29 +1175,31 @@ document.addEventListener('keydown', function(e) {
     }
     if (e.key === 'Enter' && e.target === searchInput) {
         e.preventDefault();
-        performSearch(searchInput.value);
+        if (searchInput) performSearch(searchInput.value);
     }
 });
 
-searchInput.addEventListener('input', function() {
-    clearTimeout(this._searchTimer);
-    this._searchTimer = setTimeout(() => {
-        performSearch(this.value);
-    }, 300);
-});
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        clearTimeout(this._searchTimer);
+        this._searchTimer = setTimeout(() => {
+            performSearch(this.value);
+        }, 300);
+    });
+}
 
 document.querySelectorAll('.search-tab').forEach(tab => {
     tab.addEventListener('click', function() {
         document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
         this.classList.add('active');
         searchMode = this.dataset.search;
-        performSearch(searchInput.value);
+        if (searchInput) performSearch(searchInput.value);
     });
 });
 
 if (searchBtn) {
     searchBtn.addEventListener('click', function() {
-        performSearch(searchInput.value);
+        if (searchInput) performSearch(searchInput.value);
     });
 }
 
@@ -1206,8 +1224,10 @@ if (addFriendBtn) {
         searchMode = 'users';
         document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
         document.querySelector('[data-search="users"]')?.classList.add('active');
-        searchInput.placeholder = 'ВВЕДИТЕ НИК ПОЛЬЗОВАТЕЛЯ...';
-        searchInput.focus();
+        if (searchInput) {
+            searchInput.placeholder = 'ВВЕДИТЕ НИК ПОЛЬЗОВАТЕЛЯ...';
+            searchInput.focus();
+        }
     });
 }
 
@@ -1872,15 +1892,19 @@ async function init() {
         nicknameInput.focus();
     }
     
-    // ====== СКРЫВАЕМ ЗАГРУЗОЧНЫЙ ЭКРАН ======
-    const loadingScreen = document.getElementById('loadingScreen');
-    if (loadingScreen) {
-        loadingScreen.classList.add('hidden');
-    }
-    // ==========================================
+    // Скрываем загрузку (ещё раз, для надёжности)
+    hideLoading();
     
     console.log('✅ DARK FORT ONLINE');
     console.log('👤 ID:', profileId);
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// Ждём загрузки DOM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+
+// Фолбэк — скрыть загрузку через 3 секунды в любом случае
+setTimeout(hideLoading, 3000);

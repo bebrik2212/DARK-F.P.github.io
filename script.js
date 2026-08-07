@@ -1,9 +1,3 @@
-// ============================================================
-// FIREBASE
-// ============================================// ============================================================
-// FIREBASE
-// ============================================================
-
 const firebaseConfig = {
     apiKey: "AIzaSyBa9NWi5FpmAx6ExJh1fJ3b1ipUEEBRxU",
     authDomain: "dark-fortport.firebaseapp.com",
@@ -19,10 +13,6 @@ const db = firebase.firestore();
 db.enablePersistence()
     .then(() => console.log('Offline enabled'))
     .catch(() => console.warn('Offline not available'));
-
-// ============================================================
-// КОНСТАНТЫ
-// ============================================================
 
 const ADMIN_NICKNAMES = ['amamammellstroy67'];
 const DEFAULT_AVATAR = 'https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png';
@@ -51,10 +41,6 @@ let chatWith = null;
 let unsubscribeChat = null;
 let searchMode = 'users';
 let searchQuery = '';
-
-// ============================================================
-// DOM
-// ============================================================
 
 const nicknameInput = document.getElementById('nicknameInput');
 const profileAvatarEl = document.getElementById('profileAvatar');
@@ -85,9 +71,6 @@ const sendChatBtn = document.getElementById('sendChatBtn');
 const closeChatBtn = document.getElementById('closeChatBtn');
 const feedCount = document.getElementById('feedCount');
 
-// ============================================================
-// КЭШ
-// ============================================================
 
 function getCachedData() {
     try {
@@ -103,9 +86,6 @@ function setCachedData(data) {
     } catch (e) {}
 }
 
-// ============================================================
-// ПРОФИЛЬ
-// ============================================================
 
 async function getOrCreateProfile() {
     try {
@@ -196,9 +176,6 @@ async function updateOnlineStatus(online) {
     }
 }
 
-// ============================================================
-// ЗАЯВКИ В ДРУЗЬЯ
-// ============================================================
 
 async function sendFriendRequest(userId) {
     if (!currentProfile) return false;
@@ -239,7 +216,6 @@ async function sendFriendRequest(userId) {
             friendRequests: friendRequests
         });
 
-        // Добавляем уведомление
         await addNotification(userId, 'friend_request', {
             fromId: profileId,
             fromName: currentProfile.nickname || 'АНОНИМ'
@@ -254,9 +230,6 @@ async function sendFriendRequest(userId) {
     }
 }
 
-// ============================================================
-// УВЕДОМЛЕНИЯ
-// ============================================================
 
 async function addNotification(userId, type, data) {
     try {
@@ -727,9 +700,6 @@ function showToast(msg, err = false) {
     setTimeout(() => t.remove(), 3000);
 }
 
-// ============================================================
-// ПОИСК
-// ============================================================
 
 async function searchUsers(query) {
     if (!query.trim()) {
@@ -843,9 +813,6 @@ function performSearch(query) {
     }
 }
 
-// ============================================================
-// ДРУЗЬЯ
-// ============================================================
 
 async function loadFriends() {
     if (!currentProfile) return;
@@ -930,9 +897,6 @@ async function removeFriend(userId) {
     }
 }
 
-// ============================================================
-// ЧАТ
-// ============================================================
 
 function openChat(userId, userNickname) {
     chatWith = userId;
@@ -1018,9 +982,6 @@ async function sendMessage(text) {
     }
 }
 
-// ============================================================
-// СОБЫТИЯ
-// ============================================================
 
 nicknameInput.addEventListener('input', function() {
     const nick = this.value.trim();
@@ -1165,9 +1126,6 @@ publishBtnEl.addEventListener('click', async function() {
     }
 });
 
-// ============================================================
-// МЕНЮ / ВКЛАДКИ
-// ============================================================
 
 const sectionMap = {
     feed: 'feedSection',
@@ -1202,9 +1160,6 @@ document.querySelectorAll('.menu-item').forEach(item => {
     });
 });
 
-// ============================================================
-// КЛИКИ
-// ============================================================
 
 document.addEventListener('click', function(e) {
     const voteBtn = e.target.closest('[data-vote]');
@@ -1290,9 +1245,6 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// ============================================================
-// КЛАВИАТУРА
-// ============================================================
 
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && e.target === chatInput) {
@@ -1305,9 +1257,6 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// ============================================================
-// ПОИСК В РЕАЛЬНОМ ВРЕМЕНИ
-// ============================================================
 
 searchInput.addEventListener('input', function() {
     clearTimeout(this._searchTimer);
@@ -1316,9 +1265,6 @@ searchInput.addEventListener('input', function() {
     }, 300);
 });
 
-// ============================================================
-// ВКЛАДКИ ПОИСКА
-// ============================================================
 
 document.querySelectorAll('.search-tab').forEach(tab => {
     tab.addEventListener('click', function() {
@@ -1329,9 +1275,6 @@ document.querySelectorAll('.search-tab').forEach(tab => {
     });
 });
 
-// ============================================================
-// КНОПКА ПОИСКА
-// ============================================================
 
 if (searchBtn) {
     searchBtn.addEventListener('click', function() {
@@ -1339,9 +1282,6 @@ if (searchBtn) {
     });
 }
 
-// ============================================================
-// УВЕДОМЛЕНИЯ (КОЛОКОЛЬЧИК)
-// ============================================================
 
 bellBtnEl.addEventListener('click', function() {
     notifOpen = !notifOpen;
@@ -1375,9 +1315,6 @@ document.addEventListener('click', function(e) {
     notificationPanelEl.style.display = 'none';
 });
 
-// ============================================================
-// КНОПКА ДОБАВИТЬ ДРУЗЕЙ
-// ============================================================
 
 if (addFriendBtn) {
     addFriendBtn.addEventListener('click', function() {
@@ -1390,9 +1327,6 @@ if (addFriendBtn) {
     });
 }
 
-// ============================================================
-// ЧАТ
-// ============================================================
 
 sendChatBtn.addEventListener('click', () => {
     sendMessage(chatInput.value);
@@ -1406,9 +1340,6 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// ============================================================
-// ЗАПУСК
-// ============================================================
 
 async function init() {
     try {
@@ -1458,9 +1389,7 @@ async function init() {
 
 document.addEventListener('DOMContentLoaded', init);
 
-// ============================================================
-// СТЕПАША
-// ============================================================
+
 const stepaGif = document.getElementById('stepaGif');
 const stepaWrapper = document.getElementById('stepaWrapper');
 const stepaModal = document.getElementById('stepaModal');

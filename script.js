@@ -45,6 +45,7 @@ let allGames = [];
 let unsubscribeGames = null;
 let selectedGameFile = null;
 let selectedGameAvatar = null;
+let isInitialized = false;
 
 const nicknameInput = document.getElementById('nicknameInput');
 const profileAvatarEl = document.getElementById('profileAvatar');
@@ -91,6 +92,14 @@ const gamePlayModal = document.getElementById('gamePlayModal');
 const gamePlayClose = document.getElementById('gamePlayClose');
 const gamePlayTitle = document.getElementById('gamePlayTitle');
 const gameIframe = document.getElementById('gameIframe');
+const loadingScreen = document.getElementById('loadingScreen');
+
+function hideLoading() {
+    if (loadingScreen) {
+        loadingScreen.classList.add('hidden');
+        console.log('Загрузка скрыта');
+    }
+}
 
 function getCachedData() {
     try {
@@ -2047,17 +2056,27 @@ async function init() {
     try {
         console.log('DARK FORT INIT');
         console.log('PROJECT:', firebaseConfig.projectId);
-        await db.collection('_test').doc('test').set({ test: true });
-        console.log('Firebase подключен');
+        
+        // Проверяем подключение к Firebase
+        try {
+            await db.collection('_test').doc('test').set({ test: true });
+            console.log('Firebase подключен');
+        } catch (fbError) {
+            console.warn('Firebase не отвечает, используем кэш:', fbError);
+        }
+        
         await getOrCreateProfile();
         subscribeToPosts();
         await updateOnlineStatus(true);
+        
         if (!currentProfile?.nickname) {
             nicknameInput.focus();
         }
+        
         window.addEventListener('beforeunload', () => {
             updateOnlineStatus(false);
         });
+        
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 updateOnlineStatus(false);
@@ -2065,9 +2084,10 @@ async function init() {
                 updateOnlineStatus(true);
             }
         });
+        
         console.log('DARK FORT ONLINE');
     } catch (error) {
-        console.error('Ошибка:', error);
+        console.error('Ошибка инициализации:', error);
         showToast('ОШИБКА ПОДКЛЮЧЕНИЯ К FIREBASE', true);
         const cached = getCachedData();
         if (cached?.profile) {
@@ -2083,10 +2103,26 @@ async function init() {
             </div>
         `;
     }
-    const loadingScreen = document.getElementById('loadingScreen');
-    if (loadingScreen) {
-        loadingScreen.classList.add('hidden');
-    }
+    
+    // ОБЯЗАТЕЛЬНО СКРЫВАЕМ ЗАГРУЗКУ
+    hideLoading();
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// Запускаем init и скрываем загрузку в любом случае
+document.addEventListener('DOMContentLoaded', function() {
+    // Таймаут на случай, если init зависнет
+    const timeoutId = setTimeout(function() {
+        console.warn('Таймаут загрузки, скрываем экран');
+        hideLoading();
+    }, 8000);
+    
+    init().finally(function() {
+        clearTimeout(timeoutId);
+        hideLoading();
+    });
+});
+
+// Дополнительная страховка — скрыть загрузку через 10 секунд в любом случае
+setTimeout(function() {
+    hideLoading();
+}, 10000);

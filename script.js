@@ -1,4 +1,4 @@
-const firebaseConfig = {
+const firebaseConfig = {const firebaseConfig = {
     apiKey: "AIzaSyBa9NWi5FpmAx6ExJh1fJ3b1ipUEEBRxU",
     authDomain: "dark-fortport.firebaseapp.com",
     projectId: "dark-fortport",
@@ -13,6 +13,17 @@ const db = firebase.firestore();
 db.enablePersistence()
     .then(() => console.log('Offline enabled'))
     .catch(() => console.warn('Offline not available'));
+
+// ============================================================
+// СКРЫТИЕ ЗАГРУЗКИ (СРАЗУ, БЕЗ УСЛОВИЙ)
+// ============================================================
+const loadingScreen = document.getElementById('loadingScreen');
+if (loadingScreen) {
+    loadingScreen.classList.add('hidden');
+    console.log('✅ Загрузка скрыта');
+} else {
+    console.warn('⚠️ Загрузочный экран не найден');
+}
 
 const ADMIN_NICKNAMES = ['amamammellstroy67'];
 const DEFAULT_AVATAR = 'https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png';
@@ -92,14 +103,6 @@ const gamePlayModal = document.getElementById('gamePlayModal');
 const gamePlayClose = document.getElementById('gamePlayClose');
 const gamePlayTitle = document.getElementById('gamePlayTitle');
 const gameIframe = document.getElementById('gameIframe');
-const loadingScreen = document.getElementById('loadingScreen');
-
-function hideLoading() {
-    if (loadingScreen) {
-        loadingScreen.classList.add('hidden');
-        console.log('Загрузка скрыта');
-    }
-}
 
 function getCachedData() {
     try {
@@ -2052,17 +2055,21 @@ function stepaResetAll() {
 
 stepaResetAll();
 
+// ============================================================
+// ГЛАВНАЯ ФУНКЦИЯ ЗАПУСКА
+// ============================================================
+
 async function init() {
     try {
         console.log('DARK FORT INIT');
         console.log('PROJECT:', firebaseConfig.projectId);
         
-        // Проверяем подключение к Firebase
+        // Пытаемся подключиться к Firebase
         try {
             await db.collection('_test').doc('test').set({ test: true });
-            console.log('Firebase подключен');
+            console.log('✅ Firebase подключен');
         } catch (fbError) {
-            console.warn('Firebase не отвечает, используем кэш:', fbError);
+            console.warn('⚠️ Firebase не отвечает, используем кэш:', fbError);
         }
         
         await getOrCreateProfile();
@@ -2085,10 +2092,9 @@ async function init() {
             }
         });
         
-        console.log('DARK FORT ONLINE');
+        console.log('✅ DARK FORT ONLINE');
     } catch (error) {
-        console.error('Ошибка инициализации:', error);
-        showToast('ОШИБКА ПОДКЛЮЧЕНИЯ К FIREBASE', true);
+        console.error('❌ Ошибка инициализации:', error);
         const cached = getCachedData();
         if (cached?.profile) {
             currentProfile = cached.profile;
@@ -2103,26 +2109,13 @@ async function init() {
             </div>
         `;
     }
-    
-    // ОБЯЗАТЕЛЬНО СКРЫВАЕМ ЗАГРУЗКУ
-    hideLoading();
 }
 
-// Запускаем init и скрываем загрузку в любом случае
-document.addEventListener('DOMContentLoaded', function() {
-    // Таймаут на случай, если init зависнет
-    const timeoutId = setTimeout(function() {
-        console.warn('Таймаут загрузки, скрываем экран');
-        hideLoading();
-    }, 8000);
-    
-    init().finally(function() {
-        clearTimeout(timeoutId);
-        hideLoading();
-    });
-});
+// ============================================================
+// ЗАПУСК
+// ============================================================
 
-// Дополнительная страховка — скрыть загрузку через 10 секунд в любом случае
-setTimeout(function() {
-    hideLoading();
-}, 10000);
+document.addEventListener('DOMContentLoaded', function() {
+    // Запускаем инициализацию
+    init();
+});

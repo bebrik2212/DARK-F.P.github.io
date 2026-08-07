@@ -10,10 +10,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-db.enablePersistence()
-    .then(() => console.log('Offline enabled'))
-    .catch(() => console.warn('Offline not available'));
-
 const ADMIN_NICKNAMES = ['amamammellstroy67'];
 const DEFAULT_AVATAR = 'https://images.cults3d.com/Yhomf6nyQXApFBCKN8sOAd08eE4=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/34092477/illustration-file/6f522b08-94f9-4f46-96e5-dd721b8693bb/iconmsg-cults.png';
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -24,6 +20,7 @@ const ICON_DISLIKE = 'https://fortport.ru/photo/25463';
 const ICON_COMMENT = 'https://fortport.ru/photo/25466';
 const ICON_BELL = 'https://fortport.ru/photo/25464';
 
+// --- ID ---
 let profileId = localStorage.getItem('df_profile_id');
 if (!profileId) {
     profileId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -46,6 +43,7 @@ let unsubscribeGames = null;
 let selectedGameFile = null;
 let selectedGameAvatar = null;
 
+// --- DOM ---
 const nicknameInput = document.getElementById('nicknameInput');
 const profileAvatarEl = document.getElementById('profileAvatar');
 const profileBigAvatarEl = document.getElementById('profileBigAvatar');
@@ -92,7 +90,8 @@ const gamePlayClose = document.getElementById('gamePlayClose');
 const gamePlayTitle = document.getElementById('gamePlayTitle');
 const gameIframe = document.getElementById('gameIframe');
 
-function getCachedData() {
+// --- КЭШ ---
+function getCache() {
     try {
         const raw = localStorage.getItem('df_cache');
         if (raw) return JSON.parse(raw);
@@ -100,31 +99,53 @@ function getCachedData() {
     return null;
 }
 
-function setCachedData(data) {
+function setCache(data) {
     try {
         localStorage.setItem('df_cache', JSON.stringify(data));
     } catch (e) {}
 }
 
-async function getOrCreateProfile() {
+function getPostsCache() {
     try {
-        const doc = await db.collection('profiles').doc(profileId).get();
+        const raw = localStorage.getItem('df_posts_cache');
+        if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+}
+
+function setPostsCache(posts) {
+    try {
+        localStorage.setItem('df_posts_cache', JSON.stringify(posts));
+    } catch (e) {}
+}
+
+// --- ПРОФИЛЬ (С КЭШЕМ) ---
+async function getOrCreateProfile() {
+    // Сначала кэш
+    const cached = getCache();
+    if (cached?.profile) {
+        currentProfile = cached.profile;
+        updateProfileUI();
+    }
+
+    try {
+        const doc = await Promise.race([
+            db.collection('profiles').doc(profileId).get(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+        ]);
+        
         if (doc.exists) {
             currentProfile = { id: profileId, ...doc.data() };
-            setCachedData({ profile: currentProfile });
+            setCache({ profile: currentProfile });
             updateProfileUI();
             return currentProfile;
         }
     } catch (error) {
-        console.warn('Ошибка получения профиля:', error);
-        const cached = getCachedData();
-        if (cached?.profile) {
-            currentProfile = cached.profile;
-            updateProfileUI();
-            return currentProfile;
-        }
+        console.warn('⏰ Firebase timeout, используем кэш');
+        if (currentProfile) return currentProfile;
     }
 
+    // Создаём локальный профиль
     const newProfile = {
         nickname: '',
         avatarData: DEFAULT_AVATAR,
@@ -138,11 +159,11 @@ async function getOrCreateProfile() {
     try {
         await db.collection('profiles').doc(profileId).set(newProfile);
     } catch (error) {
-        console.warn('Ошибка создания профиля:', error);
+        console.warn('Не удалось создать профиль в Firebase');
     }
 
     currentProfile = { id: profileId, ...newProfile };
-    setCachedData({ profile: currentProfile });
+    setCache({ profile: currentProfile });
     updateProfileUI();
     return currentProfile;
 }
@@ -151,28 +172,13 @@ async function saveProfile(nickname, avatarData) {
     if (!currentProfile) await getOrCreateProfile();
     if (!currentProfile) return false;
 
-    if (nickname && nickname !== currentProfile.nickname) {
-        try {
-            const snapshot = await db.collection('profiles')
-                .where('nickname', '==', nickname)
-                .get();
-            if (!snapshot.empty) {
-                nicknameInput.classList.add('error');
-                nickErrorMsg.classList.add('visible');
-                return false;
-            }
-        } catch (error) {
-            console.warn('Ошибка проверки ника:', error);
-        }
-    }
-
     const updateData = {};
     if (nickname !== undefined) updateData.nickname = nickname;
     if (avatarData !== undefined) updateData.avatarData = avatarData;
     updateData.updatedAt = new Date().toISOString();
 
     Object.assign(currentProfile, updateData);
-    setCachedData({ profile: currentProfile });
+    setCache({ profile: currentProfile });
     nicknameInput.classList.remove('error');
     nickErrorMsg.classList.remove('visible');
     updateProfileUI();
@@ -186,236 +192,27 @@ async function saveProfile(nickname, avatarData) {
     }
 }
 
-async function updateOnlineStatus(online) {
+function updateProfileUI() {
     if (!currentProfile) return;
-    try {
-        await db.collection('profiles').doc(profileId).update({ online });
-    } catch (error) {
-        console.warn('Ошибка обновления статуса:', error);
+    const nick = document.activeElement === nicknameInput ? nicknameInput.value.trim() : (currentProfile.nickname || '');
+    if (document.activeElement !== nicknameInput) {
+        nicknameInput.value = nick;
     }
+    profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
+    const avatar = currentProfile.avatarData || DEFAULT_AVATAR;
+    profileAvatarEl.src = avatar;
+    profileBigAvatarEl.src = avatar;
 }
 
-async function sendFriendRequest(userId) {
-    if (!currentProfile) return false;
-    if (userId === profileId) {
-        showToast('НЕЛЬЗЯ ДОБАВИТЬ СЕБЯ', true);
-        return false;
-    }
-
-    try {
-        const userDoc = await db.collection('profiles').doc(userId).get();
-        if (!userDoc.exists) {
-            showToast('ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН', true);
-            return false;
-        }
-
-        const userData = userDoc.data();
-        const friendRequests = userData.friendRequests || [];
-        
-        if (friendRequests.some(req => req.fromId === profileId && req.status === 'pending')) {
-            showToast('ЗАЯВКА УЖЕ ОТПРАВЛЕНА', true);
-            return false;
-        }
-
-        if (userData.friends && userData.friends.includes(profileId)) {
-            showToast('ВЫ УЖЕ ДРУЗЬЯ', true);
-            return false;
-        }
-
-        friendRequests.push({
-            fromId: profileId,
-            fromName: currentProfile.nickname || 'АНОНИМ',
-            fromAvatar: currentProfile.avatarData || DEFAULT_AVATAR,
-            status: 'pending',
-            createdAt: new Date().toISOString()
-        });
-
-        await db.collection('profiles').doc(userId).update({
-            friendRequests: friendRequests
-        });
-
-        await addNotification(userId, 'friend_request', {
-            fromId: profileId,
-            fromName: currentProfile.nickname || 'АНОНИМ'
-        });
-
-        showToast('ЗАЯВКА ОТПРАВЛЕНА');
-        return true;
-    } catch (error) {
-        console.error('Ошибка отправки заявки:', error);
-        showToast('ОШИБКА ОТПРАВКИ ЗАЯВКИ', true);
-        return false;
-    }
-}
-
-async function addNotification(userId, type, data) {
-    try {
-        const userDoc = await db.collection('profiles').doc(userId).get();
-        if (!userDoc.exists) return;
-
-        const notifications = userDoc.data().notifications || [];
-        notifications.push({
-            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-            type: type,
-            data: data,
-            read: false,
-            createdAt: new Date().toISOString()
-        });
-
-        if (notifications.length > 50) {
-            notifications.splice(0, notifications.length - 50);
-        }
-
-        await db.collection('profiles').doc(userId).update({
-            notifications: notifications
-        });
-    } catch (error) {
-        console.warn('Ошибка добавления уведомления:', error);
-    }
-}
-
-async function acceptFriendRequest(fromId) {
-    if (!currentProfile) return false;
-
-    try {
-        const userDoc = await db.collection('profiles').doc(profileId).get();
-        const userData = userDoc.data();
-        
-        let friendRequests = userData.friendRequests || [];
-        const requestIndex = friendRequests.findIndex(req => req.fromId === fromId && req.status === 'pending');
-        
-        if (requestIndex === -1) {
-            showToast('ЗАЯВКА НЕ НАЙДЕНА', true);
-            return false;
-        }
-
-        friendRequests[requestIndex].status = 'accepted';
-        
-        const friends = userData.friends || [];
-        if (!friends.includes(fromId)) {
-            friends.push(fromId);
-        }
-
-        const fromDoc = await db.collection('profiles').doc(fromId).get();
-        if (fromDoc.exists) {
-            const fromData = fromDoc.data();
-            const fromFriends = fromData.friends || [];
-            if (!fromFriends.includes(profileId)) {
-                fromFriends.push(profileId);
-            }
-            await db.collection('profiles').doc(fromId).update({
-                friends: fromFriends
-            });
-        }
-
-        await db.collection('profiles').doc(profileId).update({
-            friendRequests: friendRequests,
-            friends: friends
-        });
-
-        showToast('ДРУГ ДОБАВЛЕН');
-        loadFriends();
-        loadNotifications();
-        return true;
-    } catch (error) {
-        console.error('Ошибка принятия заявки:', error);
-        showToast('ОШИБКА ПРИНЯТИЯ ЗАЯВКИ', true);
-        return false;
-    }
-}
-
-async function declineFriendRequest(fromId) {
-    if (!currentProfile) return false;
-
-    try {
-        const userDoc = await db.collection('profiles').doc(profileId).get();
-        const userData = userDoc.data();
-        
-        let friendRequests = userData.friendRequests || [];
-        friendRequests = friendRequests.filter(req => req.fromId !== fromId || req.status !== 'pending');
-
-        await db.collection('profiles').doc(profileId).update({
-            friendRequests: friendRequests
-        });
-
-        showToast('ЗАЯВКА ОТКЛОНЕНА');
-        loadNotifications();
-        return true;
-    } catch (error) {
-        console.error('Ошибка отклонения заявки:', error);
-        showToast('ОШИБКА ОТКЛОНЕНИЯ ЗАЯВКИ', true);
-        return false;
-    }
-}
-
-async function loadNotifications() {
-    if (!currentProfile) return;
-    try {
-        const doc = await db.collection('profiles').doc(profileId).get();
-        if (doc.exists) {
-            const data = doc.data();
-            const notifications = data.notifications || [];
-            const pendingRequests = (data.friendRequests || []).filter(req => req.status === 'pending');
-            
-            const unreadCount = notifications.filter(n => !n.read).length + pendingRequests.length;
-            notifCountEl.textContent = unreadCount;
-            notifCountEl.classList.toggle('visible', unreadCount > 0);
-            
-            currentProfile.notifications = notifications;
-            currentProfile.friendRequests = data.friendRequests || [];
-        }
-    } catch (error) {
-        console.warn('Ошибка загрузки уведомлений:', error);
-    }
-}
-
-function renderNotifications() {
-    const notifications = currentProfile?.notifications || [];
-    const friendRequests = currentProfile?.friendRequests || [];
-    const pendingRequests = friendRequests.filter(req => req.status === 'pending');
-    
-    let html = '';
-    
-    pendingRequests.forEach(req => {
-        html += `
-            <div class="notif-item">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span>👤 ${escapeHtml(req.fromName)} хочет добавить вас в друзья</span>
-                    <div>
-                        <button class="btn" onclick="acceptFriendRequest('${req.fromId}')" style="padding:2px 8px;font-size:9px;">✅</button>
-                        <button class="btn" onclick="declineFriendRequest('${req.fromId}')" style="padding:2px 8px;font-size:9px;background:rgba(255,0,0,0.1);">❌</button>
-                    </div>
-                </div>
-                <span class="notif-time">${formatDate(new Date(req.createdAt))}</span>
-            </div>
-        `;
-    });
-    
-    notifications.forEach(n => {
-        let message = '';
-        switch(n.type) {
-            case 'friend_request':
-                message = `👤 ${escapeHtml(n.data.fromName)} отправил заявку в друзья`;
-                break;
-            default:
-                message = 'Новое уведомление';
-        }
-        html += `
-            <div class="notif-item">
-                ${message}
-                <span class="notif-time">${formatDate(new Date(n.createdAt))}</span>
-            </div>
-        `;
-    });
-    
-    if (!html) {
-        html = '<div class="notif-item">НЕТ УВЕДОМЛЕНИЙ</div>';
-    }
-    
-    notificationPanelEl.innerHTML = html;
-}
-
+// --- ПОСТЫ (С КЭШЕМ) ---
 function subscribeToPosts() {
+    // Показываем кэш сразу
+    const cached = getPostsCache();
+    if (cached && cached.length) {
+        allPosts = cached;
+        renderAllPosts();
+    }
+
     if (unsubscribePosts) {
         unsubscribePosts();
         unsubscribePosts = null;
@@ -423,10 +220,27 @@ function subscribeToPosts() {
 
     postsListFeedEl.innerHTML = '<div class="empty-posts">ЗАГРУЗКА...</div>';
 
+    let timeoutId = setTimeout(() => {
+        postsListFeedEl.innerHTML = `
+            <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
+                <div style="font-size:48px;margin-bottom:12px;">📡</div>
+                <div>ОФФЛАЙН РЕЖИМ</div>
+                <div style="font-size:0.85rem;color:#5a5d66;">ПОСТЫ ИЗ КЭША</div>
+                ${cached && cached.length ? `<div style="font-size:0.85rem;color:#5a5d66;margin-top:4px;">ЗАГРУЖЕНО ${cached.length} ПОСТОВ</div>` : ''}
+                <button onclick="subscribeToPosts()" style="margin-top:12px;padding:8px 20px;background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.1);border-radius:6px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+            </div>
+        `;
+        if (cached && cached.length) {
+            allPosts = cached;
+            renderAllPosts();
+        }
+    }, 4000);
+
     unsubscribePosts = db.collection('posts')
         .orderBy('createdAt', 'desc')
         .limit(100)
         .onSnapshot(async (snapshot) => {
+            clearTimeout(timeoutId);
             const posts = [];
             for (const doc of snapshot.docs) {
                 const data = doc.data();
@@ -450,18 +264,24 @@ function subscribeToPosts() {
                 });
             }
             allPosts = posts;
+            setPostsCache(posts);
             renderAllPosts();
-            loadNotifications();
             if (feedCount) feedCount.textContent = posts.length;
         }, (error) => {
-            console.error('Ошибка подписки:', error);
-            postsListFeedEl.innerHTML = `
-                <div class="empty-posts">
-                    <div>ОШИБКА ПОДКЛЮЧЕНИЯ</div>
-                    <div style="font-size:0.85rem;color:#5a5d66;margin-top:8px;">${error.message}</div>
-                    <button onclick="subscribeToPosts()" style="margin-top:12px;padding:8px 20px;background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.1);border-radius:6px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
-                </div>
-            `;
+            console.warn('Ошибка подписки:', error);
+            clearTimeout(timeoutId);
+            if (cached && cached.length) {
+                allPosts = cached;
+                renderAllPosts();
+                postsListFeedEl.innerHTML = `
+                    <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
+                        <div style="font-size:48px;margin-bottom:12px;">📡</div>
+                        <div>ОФФЛАЙН РЕЖИМ</div>
+                        <div style="font-size:0.85rem;color:#5a5d66;">ПОСТЫ ИЗ КЭША</div>
+                        <button onclick="subscribeToPosts()" style="margin-top:12px;padding:8px 20px;background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.1);border-radius:6px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
+                    </div>
+                `;
+            }
         });
 }
 
@@ -493,10 +313,7 @@ async function createPost(text, media) {
 async function deletePost(postId) {
     try {
         const doc = await db.collection('posts').doc(postId).get();
-        if (!doc.exists) {
-            showToast('ПОСТ НЕ НАЙДЕН', true);
-            return false;
-        }
+        if (!doc.exists) return false;
         const data = doc.data();
         const isAdmin = ADMIN_NICKNAMES.includes(currentProfile?.nickname);
         const isOwner = data.authorId === profileId;
@@ -570,18 +387,6 @@ async function addComment(postId, text) {
         console.error('Ошибка комментария:', error);
         return false;
     }
-}
-
-function updateProfileUI() {
-    if (!currentProfile) return;
-    const nick = document.activeElement === nicknameInput ? nicknameInput.value.trim() : (currentProfile.nickname || '');
-    if (document.activeElement !== nicknameInput) {
-        nicknameInput.value = nick;
-    }
-    profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
-    const avatar = currentProfile.avatarData || DEFAULT_AVATAR;
-    profileAvatarEl.src = avatar;
-    profileBigAvatarEl.src = avatar;
 }
 
 function renderAllPosts() {
@@ -701,6 +506,7 @@ function showToast(msg, err = false) {
     setTimeout(() => t.remove(), 3000);
 }
 
+// --- ПОИСК ---
 async function searchUsers(query) {
     if (!query.trim()) {
         searchResults.innerHTML = '<div class="empty-posts">ВВЕДИТЕ ЗАПРОС ДЛЯ ПОИСКА</div>';
@@ -813,6 +619,7 @@ function performSearch(query) {
     }
 }
 
+// --- ДРУЗЬЯ (СОКРАЩЕНО) ---
 async function loadFriends() {
     if (!currentProfile) return;
     const friendIds = currentProfile.friends || [];
@@ -865,7 +672,7 @@ async function addFriend(userId) {
     currentProfile.friends = friends;
     try {
         await db.collection('profiles').doc(profileId).update({ friends });
-        setCachedData({ profile: currentProfile });
+        setCache({ profile: currentProfile });
         showToast('ДРУГ ДОБАВЛЕН');
         loadFriends();
         return true;
@@ -885,7 +692,7 @@ async function removeFriend(userId) {
     currentProfile.friends = friends;
     try {
         await db.collection('profiles').doc(profileId).update({ friends });
-        setCachedData({ profile: currentProfile });
+        setCache({ profile: currentProfile });
         showToast('ДРУГ УДАЛЁН');
         loadFriends();
         return true;
@@ -896,6 +703,7 @@ async function removeFriend(userId) {
     }
 }
 
+// --- ЧАТ ---
 function openChat(userId, userNickname) {
     chatWith = userId;
     chatFriendName.textContent = 'ЧАТ С ' + (userNickname || 'ДРУГОМ');
@@ -977,10 +785,10 @@ async function sendMessage(text) {
     } catch (error) {
         console.error('Ошибка отправки:', error);
         showToast('ОШИБКА ОТПРАВКИ', true);
-        return false;
     }
 }
 
+// --- СОБЫТИЯ ---
 nicknameInput.addEventListener('input', function() {
     const nick = this.value.trim();
     profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
@@ -1124,6 +932,7 @@ publishBtnEl.addEventListener('click', async function() {
     }
 });
 
+// --- ВКЛАДКИ ---
 const sectionMap = {
     feed: 'feedSection',
     friends: 'friendsSection',
@@ -1157,6 +966,7 @@ document.querySelectorAll('.menu-item').forEach(item => {
     });
 });
 
+// --- КЛИКИ ---
 document.addEventListener('click', function(e) {
     const voteBtn = e.target.closest('[data-vote]');
     if (voteBtn) {
@@ -1276,24 +1086,8 @@ bellBtnEl.addEventListener('click', function() {
     notificationPanelEl.style.display = notifOpen ? 'block' : 'none';
     if (notifOpen) {
         renderNotifications();
-        if (currentProfile?.notifications) {
-            currentProfile.notifications.forEach(n => n.read = true);
-            db.collection('profiles').doc(profileId).update({
-                notifications: currentProfile.notifications
-            }).catch(() => {});
-            updateNotifCount();
-        }
     }
 });
-
-function updateNotifCount() {
-    const notifications = currentProfile?.notifications || [];
-    const friendRequests = currentProfile?.friendRequests || [];
-    const pendingRequests = friendRequests.filter(req => req.status === 'pending');
-    const unreadCount = notifications.filter(n => !n.read).length + pendingRequests.length;
-    notifCountEl.textContent = unreadCount;
-    notifCountEl.classList.toggle('visible', unreadCount > 0);
-}
 
 document.addEventListener('click', function(e) {
     if (!notifOpen) return;
@@ -1325,6 +1119,7 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// --- ИГРЫ ---
 function loadGames() {
     if (unsubscribeGames) {
         unsubscribeGames();
@@ -1558,6 +1353,7 @@ if (gameUploadBtn) {
     });
 }
 
+// --- СТЕПАША (СОКРАЩЕНО) ---
 const stepaGif = document.getElementById('stepaGif');
 const stepaWrapper = document.getElementById('stepaWrapper');
 const stepaModal = document.getElementById('stepaModal');
@@ -2044,53 +1840,23 @@ function stepaResetAll() {
 
 stepaResetAll();
 
+// --- ЗАПУСК ---
 async function init() {
-    try {
-        console.log('DARK FORT INIT');
-        console.log('PROJECT:', firebaseConfig.projectId);
-        await db.collection('_test').doc('test').set({ test: true });
-        console.log('Firebase подключен');
-        await getOrCreateProfile();
-        subscribeToPosts();
-        await updateOnlineStatus(true);
-        if (!currentProfile?.nickname) {
-            nicknameInput.focus();
-        }
-        window.addEventListener('beforeunload', () => {
-            updateOnlineStatus(false);
-        });
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                updateOnlineStatus(false);
-            } else {
-                updateOnlineStatus(true);
-            }
-        });
-        console.log('DARK FORT ONLINE');
-    } catch (error) {
-        console.error('Ошибка:', error);
-        showToast('ОШИБКА ПОДКЛЮЧЕНИЯ К FIREBASE', true);
-        const cached = getCachedData();
-        if (cached?.profile) {
-            currentProfile = cached.profile;
-            updateProfileUI();
-        }
-        postsListFeedEl.innerHTML = `
-            <div class="empty-posts" style="padding:60px 20px;text-align:center;color:#8d9098;line-height:2;">
-                <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
-                <div>ОФФЛАЙН РЕЖИМ</div>
-                <div style="font-size:0.85rem;color:#5a5d66;">${error.message}</div>
-                <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.1);border-radius:6px;color:white;cursor:pointer;">ПОВТОРИТЬ</button>
-            </div>
-        `;
+    console.log('🚀 DARK FORT INIT');
+    
+    // Получаем профиль (с кэшем)
+    await getOrCreateProfile();
+    
+    // Подписываемся на посты (с кэшем)
+    subscribeToPosts();
+    
+    // Если нет ника — фокус
+    if (!currentProfile?.nickname) {
+        nicknameInput.focus();
     }
     
-    // СКРЫВАЕМ ЗАГРУЗОЧНЫЙ ЭКРАН
-    const loadingScreen = document.getElementById('loadingScreen');
-    if (loadingScreen) {
-        loadingScreen.classList.add('hidden');
-        console.log('✅ Загрузка скрыта');
-    }
+    console.log('✅ DARK FORT ONLINE');
+    console.log('👤 ID:', profileId);
 }
 
 document.addEventListener('DOMContentLoaded', init);

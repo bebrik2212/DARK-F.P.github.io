@@ -921,7 +921,6 @@ function switchTab(tab) {
 // ============================================================
 // СОБЫТИЯ
 // ============================================================
-// Переключение вкладок
 document.querySelectorAll('.menu-item').forEach(item => {
     item.addEventListener('click', function(e) {
         e.preventDefault();
@@ -929,7 +928,6 @@ document.querySelectorAll('.menu-item').forEach(item => {
     });
 });
 
-// Никнейм
 nicknameInput.addEventListener('input', function() {
     const nick = this.value.trim();
     profileNicknameEl.textContent = nick || 'ТВОЙ НИК';
@@ -948,7 +946,6 @@ nicknameInput.addEventListener('blur', function() {
     if (nick) saveProfile(nick);
 });
 
-// Аватар
 profileAvatarEl.addEventListener('click', () => avatarUploadEl.click());
 
 avatarUploadEl.addEventListener('change', function() {
@@ -975,7 +972,6 @@ avatarUploadEl.addEventListener('change', function() {
     reader.readAsDataURL(file);
 });
 
-// Медиа для постов
 document.getElementById('attachBtn').addEventListener('click', () => mediaUploadEl.click());
 
 mediaUploadEl.addEventListener('change', function() {
@@ -1035,7 +1031,6 @@ mediaPreviewEl.addEventListener('click', function(e) {
     updateUploadStatus();
 });
 
-// Публикация поста
 publishBtnEl.addEventListener('click', async function() {
     if (!currentProfile?.nickname) {
         showToast('СНАЧАЛА УСТАНОВИТЕ НИК', true);
@@ -1076,7 +1071,6 @@ publishBtnEl.addEventListener('click', async function() {
     }
 });
 
-// Клики
 document.addEventListener('click', function(e) {
     const voteBtn = e.target.closest('[data-vote]');
     if (voteBtn) {
@@ -1158,7 +1152,6 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Клавиши
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && e.target === chatInput) {
         e.preventDefault();
@@ -1170,7 +1163,6 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Поиск
 searchInput.addEventListener('input', function() {
     clearTimeout(this._searchTimer);
     this._searchTimer = setTimeout(() => {
@@ -1193,7 +1185,6 @@ if (searchBtn) {
     });
 }
 
-// Уведомления
 bellBtnEl.addEventListener('click', function() {
     notifOpen = !notifOpen;
     notificationPanelEl.style.display = notifOpen ? 'block' : 'none';
@@ -1220,7 +1211,6 @@ if (addFriendBtn) {
     });
 }
 
-// Чат
 sendChatBtn.addEventListener('click', () => {
     sendMessage(chatInput.value);
 });
@@ -1233,7 +1223,6 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Игры - загрузка
 if (showUploadGameBtn) {
     showUploadGameBtn.addEventListener('click', function() {
         if (gameUploadModal) {
@@ -1364,7 +1353,6 @@ if (gameUploadBtn) {
     });
 }
 
-// Игры - плеер
 if (gamePlayModal) {
     gamePlayModal.addEventListener('click', function(e) {
         if (e.target === this) {
@@ -1883,6 +1871,13 @@ async function init() {
     if (!currentProfile?.nickname) {
         nicknameInput.focus();
     }
+    
+    // ====== СКРЫВАЕМ ЗАГРУЗОЧНЫЙ ЭКРАН ======
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) {
+        loadingScreen.classList.add('hidden');
+    }
+    // ==========================================
     
     console.log('✅ DARK FORT ONLINE');
     console.log('👤 ID:', profileId);

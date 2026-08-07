@@ -2084,6 +2084,13 @@ async function init() {
             </div>
         `;
     }
+    
+    // СКРЫВАЕМ ЗАГРУЗОЧНЫЙ ЭКРАН
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) {
+        loadingScreen.classList.add('hidden');
+        console.log('✅ Загрузка скрыта');
+    }
 }
 
 document.addEventListener('DOMContentLoaded', init);
